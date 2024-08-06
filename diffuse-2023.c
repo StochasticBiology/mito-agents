@@ -1,3 +1,19 @@
+// assume cell production is 10^9 ATP/s (https://www.molbiolcell.org/doi/10.1091/mbc.e14-09-1347)
+// assume all OXPHOS: 100 mitos -> production (balanced) = 10^7 ATP/s/mito
+// diffusion rate somewhere around (5?)*5*1.5e2 length^2 / s
+// solution concentration ~ 10^5 ATP/length^2
+// typical cellular ATP conc = 1-10mM (https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8615055/)
+// 1mM ATP = 10^-3 mol dm-3 = 10^-3 mol (10^15 um^3)-1 = 1e-3 * 6e23 / 1e15 = 6e5 molecules / um^3
+// suggest picturing a 10um-thick cell reflected by the 2D profile we simulate
+
+// Intracellular diffusion gradients of O2 and ATP https://journals.physiology.org/doi/epdf/10.1152/ajpcell.1986.250.5.C663
+
+// lots of diffusion rates https://book.bionumbers.org/what-are-the-time-scales-for-diffusion-in-cells/
+// generally cell is ~3 times slower than water
+// fish muscle: ATP diffusion 2.5e-6 cm^2 / s = 2.5e2 um^2 / s (https://pubmed.ncbi.nlm.nih.gov/7547189/)
+// water: 7e-6 cm^2 / s = 7e2 um^2 / s https://www.sciencedirect.com/science/article/abs/pii/0003986164902656
+// so something like 2.5e2 um^2/s seems fine
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -17,7 +33,9 @@ int main(void)
   int lastt;
   double total;
   int expt;
-
+  double totalATP;
+  double kappa = 0.01;
+  
   // allocate memory to store 100x100 grid of ATP concentration values
   grid = (double*)malloc(sizeof(double)*100*100);
   newgrid = (double*)malloc(sizeof(double)*100*100);
@@ -70,9 +88,9 @@ int main(void)
 		  d = (j == 99 ? grid[i*100+98] : grid[i*100+j+1]);
 		  h = grid[i*100+j];
 		  // finite difference solver with some parameters to capture diffusion
-		  newgrid[i*100+j] = grid[i*100+j] + 5*5*1.5e2*(dt*(l + r - 2*h) + dt*(u + d - 2*h));
+		  newgrid[i*100+j] = grid[i*100+j] + 2.5e2*(dt*(l + r - 2*h) + dt*(u + d - 2*h));
 		  // uniform loss of ATP everywhere in cell
-		  loss = dt*1e9/(100.*100.);
+		  loss = dt* newgrid[i*100+j]*kappa;
 		  // impose nonnegativity (crudely)
 		  if(newgrid[i*100+j]-loss < 0) newgrid[i*100+j] = 0;
 		  else { newgrid[i*100+j] -= loss; totalloss += loss; }
@@ -82,14 +100,18 @@ int main(void)
 	  // loop through the 100 mitos and add point ATP mass at each position
 	  for(i = 0; i < 100; i++)
 	    {
-	      newgrid[x[i]*100+y[i]] += 1e7*dt; // consumption is 10^9 per cell per sec
-	      totalgain += 1e7*dt;
+	      newgrid[x[i]*100+y[i]] += 1e9*dt; // consumption is 10^9 per cell per sec
+	      totalgain += 1e9*dt;
 	    }
 	  // finally, update new state of cell from buffer
+	  totalATP = 0;
 	  for(i = 0; i < 100; i++)
 	    {
 	      for(j = 0; j < 100; j++)
-		grid[i*100+j] = newgrid[i*100+j];
+		{
+		  grid[i*100+j] = newgrid[i*100+j];
+	          totalATP += grid[i*100+j];
+		}
 	    }
 	}
       // final output details of mitos
@@ -99,7 +121,19 @@ int main(void)
 	fprintf(fp, "%i %i\n", x[i], y[i]);
       fclose(fp);
 
-      printf("%.5f %.5f\n", totalloss/dt, totalgain/dt);
+      printf("Total loss in last second %.2e\n", totalloss/dt);
+      // total cell volume in dm-3: (in metres) * (dm3 in 1 m3)
+      double vol = (100*1e-6 * 100*1e-6 * 10*1e-6) * (10*10*10);
+      printf("vol is %.2e dm3\n", vol);
+      printf("Total ATP = %.2e molecules (%.2e mol) (conc %.2eM)\n", totalATP, totalATP/6e23, totalATP/6e23 / vol);
+      //      printf("%.5f %.5f\n", totalloss/dt, totalgain/dt);
     }
   return 0;
 }
+
+// 3D
+// volume = 100*1e-6 * 100*1e-6 * d*1e-6 = d * 1e-14 m^3
+//        = d * 1e-11 dm-3
+// generally about 2e11 molecules = 3e-13 mol
+// -> 3e-13/(d * 1e-11) mol dm-3
+// say d = 10um, then 3e-3 mol dm-3 = 3mM
