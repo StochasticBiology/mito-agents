@@ -88,7 +88,7 @@ int main(void)
 			  if(expt == 0 || expt == 1)
   			    loss = dt* newgrid[i*100+j]*kappa;
 			  else
-			    loss = ((i-50)*(i-50) + (j-50)*(j-50) < 25*25 ? dt* newgrid[i*100+j]*kappa : 0);
+			    loss = ((i-50)*(i-50) + (j-50)*(j-50) < 25*25 ? dt* newgrid[i*100+j]*kappa*100 : 0);
 			  // impose nonnegativity (crudely and shouldn't happen
 			  if(newgrid[i*100+j]-loss < 0) newgrid[i*100+j] = 0;
 			  else { newgrid[i*100+j] -= loss; totalloss += loss; }
