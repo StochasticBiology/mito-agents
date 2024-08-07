@@ -56,10 +56,10 @@ int main(void)
 	  for(delta = 0.01; delta <= 10; delta *= 2)
 	    {
 	      printf("Running expt %i, kappa %.2e, delta %.2e\n", expt, kappa, delta);
+	      srand48(1);
 	      // initialises positions of mitochondria (x, y are coordinates)
 	      for(i = 0; i < 100; i++)
 		{
-		  srand48(1);
 		  if(expt != 1) { x[i] = RND*100; y[i] = RND*100; }
 		  else { x[i] = RND*20+40; y[i] = RND*20+40; }
 		  for(j = 0; j < 100; j++)
