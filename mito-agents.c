@@ -35,14 +35,19 @@ int main(void)
   int expt;
   double totalATP, changeATP, minATP, maxATP, lastATP;
   double kappa, delta;
+  double vol;
   
   // allocate memory to store 100x100 grid of ATP concentration values
   grid = (double*)malloc(sizeof(double)*100*100);
   newgrid = (double*)malloc(sizeof(double)*100*100);
 
   fp = fopen("stats.csv", "w");
-  fprintf(fp, "expt,kappa,delta,t,total.ATP,ex.molar,min.ATP,max.ATP,change.ATP,consumption\n");
+  fprintf(fp, "expt,kappa,delta,t,total.ATP,ex.molar,min.ATP,max.ATP,change.ATP,consumption,terminated\n");
   fclose(fp);
+
+  // total cell volume in dm-3: (in metres) * (dm3 in 1 m3)
+  vol = (100*1e-6 * 100*1e-6 * 10*1e-6) * (10*10*10);
+	
   // two different experiments: random mito spread or clustering near centre
   for(expt = 0; expt <= 1; expt++)
     {
@@ -62,7 +67,7 @@ int main(void)
 
 	      // discrete time PDE solver (very crude)
 	      lastt = -1; changeATP = 1; totalATP = lastATP = 0;
-	      for(t = 0; t < 1000.1 && changeATP > dt*1e-3*totalATP; t+=dt)
+	      for(t = 0; t < 1000.1 && changeATP > dt*1e-4*totalATP; t+=dt)
 		{
 		  totalloss = totalgain = 0;
 		  // actual PDE "solver": loop through each element of our discretised domain
@@ -110,13 +115,11 @@ int main(void)
 		  if((int)t != lastt)
 		    {
 		      // printf("Total loss in last second %.2e\n", totalloss/dt);
-		      // total cell volume in dm-3: (in metres) * (dm3 in 1 m3)
-	   	      double vol = (100*1e-6 * 100*1e-6 * 10*1e-6) * (10*10*10);
 		      //printf("vol is %.2e dm3\n", vol);
 		      //printf("Total ATP = %.2e molecules (%.2e mol) (conc %.2eM)\n", totalATP, totalATP/6e23, totalATP/6e23 / vol);
 
 		      fp = fopen("stats.csv", "a");
-		      fprintf(fp, "%i,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e\n", expt, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, totalloss/dt);
+		      fprintf(fp, "%i,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,0\n", expt, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, totalloss/dt);
 		      fclose(fp);
 
 		      if((int)t < 5 || (int)t % 100 == 0)
@@ -139,6 +142,10 @@ int main(void)
 
 		}
 	      printf("stopped at %e\n", t);
+	      fp = fopen("stats.csv", "a");
+	      fprintf(fp, "%i,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,1\n", expt, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, totalloss/dt);
+	      fclose(fp);
+
 	      // final output details of mitos
 	      sprintf(fstr, "mitos-%i.txt", expt);
 	      fp = fopen(fstr, "w");
