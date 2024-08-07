@@ -35,8 +35,15 @@ ggplot(df, aes(x=t, y=fold.range, color=paste(kappa,delta))) + geom_point() +
 
 #### instances
 
-snap.1 = read.table("out-0-0.01-0.01-2.txt", sep=" ", header=FALSE)
-snap.m.1 = read.table("mitos-0.txt", sep=" ", header=FALSE)
-ggplot() +
-  geom_tile(data=snap.1, aes(x=V1,y=V2,fill=V3)) +
-  geom_point(data=snap.m.1, aes(x=V1,y=V2), color="white")
+snaps = c("out-0-0.01-0.01-1.txt", "out-0-0.01-0.01-4.txt", "out-0-0.01-0.01-100.txt", "out-0-0.01-0.01-400.txt")
+snaps.m = rep("mitos-0.txt", 4)
+p.list = list()
+for(i in 1:length(snaps)) {
+  t.snap = read.table(snaps[i], sep=" ", header=FALSE)
+  t.snap.m = read.table(snaps.m[i], sep=" ", header=FALSE)
+  p.list[[i]] = ggplot() +
+    geom_tile(data=t.snap, aes(x=V1,y=V2,fill=V3)) +
+    scale_fill_continuous(limits=c(0,NA)) +
+    geom_point(data=t.snap.m, aes(x=V1,y=V2), color="white", size=0.5)
+}
+ggarrange(plotlist=p.list)
