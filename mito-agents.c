@@ -33,101 +33,120 @@ int main(void)
   int lastt;
   double total;
   int expt;
-  double totalATP;
-  double kappa = 0.01;
+  double totalATP, changeATP, minATP, maxATP, lastATP;
+  double kappa, delta;
   
   // allocate memory to store 100x100 grid of ATP concentration values
   grid = (double*)malloc(sizeof(double)*100*100);
   newgrid = (double*)malloc(sizeof(double)*100*100);
 
+  fp = fopen("stats.csv", "w");
+  fprintf(fp, "expt,kappa,delta,t,total.ATP,ex.molar,min.ATP,max.ATP,change.ATP,consumption\n");
+  fclose(fp);
   // two different experiments: random mito spread or clustering near centre
   for(expt = 0; expt <= 1; expt++)
     {
-      // initialises positions of mitochondria (x, y are coordinates)
-      for(i = 0; i < 100; i++)
+      for(kappa = 0.01; kappa <= 1; kappa *= 10)
 	{
-	  if(expt == 0) { x[i] = RND*100; y[i] = RND*100; }
-	  else { x[i] = RND*20+40; y[i] = RND*20+40; }
-	  for(j = 0; j < 100; j++)
-	    grid[i*100+j] = 0;
-	}
-
-      // discrete time PDE solver (very crude)
-      lastt = -1;
-      for(t = 0; t < 1000.1; t+=dt)
-	{
-	  // output snapshot of simulation periodically
-	  if((t > 5 && (int)(t/100) != lastt) || (t <= 5 && (int)(t) != lastt))
+	  for(delta = 0.1; delta <= 10; delta *= 10)
 	    {
-	      printf("Total loss in last second %.2e\n", totalloss/dt);
-	      // total cell volume in dm-3: (in metres) * (dm3 in 1 m3)
-	      double vol = (100*1e-6 * 100*1e-6 * 10*1e-6) * (10*10*10);
-	      printf("vol is %.2e dm3\n", vol);
-	      printf("Total ATP = %.2e molecules (%.2e mol) (conc %.2eM)\n", totalATP, totalATP/6e23, totalATP/6e23 / vol);
-
-	      // XXX track this to find equilibration conditions; don't output state every second
-	      total = 0;
-	      sprintf(fstr, "out-%i-%i.txt", expt, (int)t);
-	      fp = fopen(fstr, "w");
+	      printf("Running expt %i, kappa %.2e, delta %.2e\n", expt, kappa, delta);
+	      // initialises positions of mitochondria (x, y are coordinates)
 	      for(i = 0; i < 100; i++)
 		{
+		  if(expt == 0) { x[i] = RND*100; y[i] = RND*100; }
+		  else { x[i] = RND*20+40; y[i] = RND*20+40; }
 		  for(j = 0; j < 100; j++)
+		    grid[i*100+j] = 0;
+		}
+
+	      // discrete time PDE solver (very crude)
+	      lastt = -1; changeATP = 1; totalATP = lastATP = 0;
+	      for(t = 0; t < 1000.1 && changeATP > dt*1e-3*totalATP; t+=dt)
+		{
+		  totalloss = totalgain = 0;
+		  // actual PDE "solver": loop through each element of our discretised domain
+		  for(i = 0; i < 100; i++)
 		    {
-		      fprintf(fp, "%i %i %.5f\n", i, j, grid[i*100+j]);
-		      total += grid[i*100+j];
+		      for(j = 0; j < 100; j++)
+			{
+			  // find neighbours of this cell element -- using periodic boundary conditions
+			  l = (i == 0 ? grid[1*100+j] : grid[(i-1)*100+j]);
+			  r = (i == 99 ? grid[98*100+j] : grid[(i+1)*100+j]);
+			  u = (j == 0 ? grid[i*100+1] : grid[i*100+j-1]);
+			  d = (j == 99 ? grid[i*100+98] : grid[i*100+j+1]);
+			  h = grid[i*100+j];
+			  // finite difference solver with some parameters to capture diffusion
+			  newgrid[i*100+j] = grid[i*100+j] + 2.5e2*(dt*(l + r - 2*h) + dt*(u + d - 2*h));
+			  // uniform loss of ATP everywhere in cell
+			  loss = dt* newgrid[i*100+j]*kappa;
+			  // impose nonnegativity (crudely)
+			  if(newgrid[i*100+j]-loss < 0) newgrid[i*100+j] = 0;
+			  else { newgrid[i*100+j] -= loss; totalloss += loss; }
+			}
 		    }
-		  fprintf(fp, "\n");
+		  // the above took care of loss and diffusion, now take care of production terms
+		  // loop through the 100 mitos and add point ATP mass at each position
+		  for(i = 0; i < 100; i++)
+		    {
+		      newgrid[x[i]*100+y[i]] += delta*1e7*dt; // consumption is 10^9 per cell per sec
+		      totalgain += delta*1e7*dt;
+		    }
+		  // finally, update new state of cell from buffer
+		  totalATP = 0; minATP = 1e100; maxATP = 0; 
+		  for(i = 0; i < 100; i++)
+		    {
+		      for(j = 0; j < 100; j++)
+			{
+			  grid[i*100+j] = newgrid[i*100+j];
+			  if(grid[i*100+j] < minATP) minATP = grid[i*100+j];
+			  if(grid[i*100+j] > maxATP) maxATP = grid[i*100+j];
+			  totalATP += grid[i*100+j];
+			}
+		    }
+		  changeATP = totalATP - lastATP;
+		  lastATP = totalATP;
+	  
+		  if((int)t != lastt)
+		    {
+		      // printf("Total loss in last second %.2e\n", totalloss/dt);
+		      // total cell volume in dm-3: (in metres) * (dm3 in 1 m3)
+	   	      double vol = (100*1e-6 * 100*1e-6 * 10*1e-6) * (10*10*10);
+		      //printf("vol is %.2e dm3\n", vol);
+		      //printf("Total ATP = %.2e molecules (%.2e mol) (conc %.2eM)\n", totalATP, totalATP/6e23, totalATP/6e23 / vol);
+
+		      fp = fopen("stats.csv", "a");
+		      fprintf(fp, "%i,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e\n", expt, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, totalloss/dt);
+		      fclose(fp);
+
+		      if((int)t < 5 || (int)t % 100 == 0)
+			{
+			  sprintf(fstr, "out-%i-%.2e-%.2e-%i.txt", expt, kappa, delta, (int)t);
+			  fp = fopen(fstr, "w");
+			  for(i = 0; i < 100; i++)
+			    {
+			      for(j = 0; j < 100; j++)
+				{
+				  fprintf(fp, "%i %i %.5f\n", i, j, grid[i*100+j]);
+				  total += grid[i*100+j];
+				}
+			      fprintf(fp, "\n");
+			    }
+			  fclose(fp);
+			}
+		      lastt = ((int)t);
+		    }
+
 		}
+	      printf("stopped at %e\n", t);
+	      // final output details of mitos
+	      sprintf(fstr, "mitos-%i.txt", expt);
+	      fp = fopen(fstr, "w");
+	      for(i = 0; i < 100; i++)
+		fprintf(fp, "%i %i\n", x[i], y[i]);
 	      fclose(fp);
-	      printf("%i %.5f\n", (int)t, total);
-	      lastt = (t <= 5 ? (int)t : (int)(t/100));
-	    }
-	  totalloss = totalgain = 0;
-	  // actual PDE "solver": loop through each element of our discretised domain
-	  for(i = 0; i < 100; i++)
-	    {
-	      for(j = 0; j < 100; j++)
-		{
-		  // find neighbours of this cell element -- using periodic boundary conditions
-		  l = (i == 0 ? grid[1*100+j] : grid[(i-1)*100+j]);
-		  r = (i == 99 ? grid[98*100+j] : grid[(i+1)*100+j]);
-		  u = (j == 0 ? grid[i*100+1] : grid[i*100+j-1]);
-		  d = (j == 99 ? grid[i*100+98] : grid[i*100+j+1]);
-		  h = grid[i*100+j];
-		  // finite difference solver with some parameters to capture diffusion
-		  newgrid[i*100+j] = grid[i*100+j] + 2.5e2*(dt*(l + r - 2*h) + dt*(u + d - 2*h));
-		  // uniform loss of ATP everywhere in cell
-		  loss = dt* newgrid[i*100+j]*kappa;
-		  // impose nonnegativity (crudely)
-		  if(newgrid[i*100+j]-loss < 0) newgrid[i*100+j] = 0;
-		  else { newgrid[i*100+j] -= loss; totalloss += loss; }
-		}
-	    }
-	  // the above took care of loss and diffusion, now take care of production terms
-	  // loop through the 100 mitos and add point ATP mass at each position
-	  for(i = 0; i < 100; i++)
-	    {
-	      newgrid[x[i]*100+y[i]] += 1e7*dt; // consumption is 10^9 per cell per sec
-	      totalgain += 1e9*dt;
-	    }
-	  // finally, update new state of cell from buffer
-	  totalATP = 0;
-	  for(i = 0; i < 100; i++)
-	    {
-	      for(j = 0; j < 100; j++)
-		{
-		  grid[i*100+j] = newgrid[i*100+j];
-	          totalATP += grid[i*100+j];
-		}
 	    }
 	}
-      // final output details of mitos
-      sprintf(fstr, "mitos-%i.txt", expt);
-      fp = fopen(fstr, "w");
-      for(i = 0; i < 100; i++)
-	fprintf(fp, "%i %i\n", x[i], y[i]);
-      fclose(fp);
-
       //      printf("%.5f %.5f\n", totalloss/dt, totalgain/dt);
     }
   return 0;
