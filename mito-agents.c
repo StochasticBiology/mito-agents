@@ -29,7 +29,7 @@ int main(void)
   double h, l, r, u, d;
   int i, j;
   double t;
-  double dt = 0.00001;
+  double dt = 0.001;
   int lastt;
   double total;
   int expt;
@@ -54,11 +54,18 @@ int main(void)
 
       // discrete time PDE solver (very crude)
       lastt = -1;
-      for(t = 0; t < 2.1; t+=dt)
+      for(t = 0; t < 1000.1; t+=dt)
 	{
 	  // output snapshot of simulation periodically
-	  if((int)t != lastt)
+	  if((t > 5 && (int)(t/100) != lastt) || (t <= 5 && (int)(t) != lastt))
 	    {
+	      printf("Total loss in last second %.2e\n", totalloss/dt);
+	      // total cell volume in dm-3: (in metres) * (dm3 in 1 m3)
+	      double vol = (100*1e-6 * 100*1e-6 * 10*1e-6) * (10*10*10);
+	      printf("vol is %.2e dm3\n", vol);
+	      printf("Total ATP = %.2e molecules (%.2e mol) (conc %.2eM)\n", totalATP, totalATP/6e23, totalATP/6e23 / vol);
+
+	      // XXX track this to find equilibration conditions; don't output state every second
 	      total = 0;
 	      sprintf(fstr, "out-%i-%i.txt", expt, (int)t);
 	      fp = fopen(fstr, "w");
@@ -73,7 +80,7 @@ int main(void)
 		}
 	      fclose(fp);
 	      printf("%i %.5f\n", (int)t, total);
-	      lastt = (int)t;
+	      lastt = (t <= 5 ? (int)t : (int)(t/100));
 	    }
 	  totalloss = totalgain = 0;
 	  // actual PDE "solver": loop through each element of our discretised domain
@@ -100,7 +107,7 @@ int main(void)
 	  // loop through the 100 mitos and add point ATP mass at each position
 	  for(i = 0; i < 100; i++)
 	    {
-	      newgrid[x[i]*100+y[i]] += 1e9*dt; // consumption is 10^9 per cell per sec
+	      newgrid[x[i]*100+y[i]] += 1e7*dt; // consumption is 10^9 per cell per sec
 	      totalgain += 1e9*dt;
 	    }
 	  // finally, update new state of cell from buffer
@@ -121,11 +128,6 @@ int main(void)
 	fprintf(fp, "%i %i\n", x[i], y[i]);
       fclose(fp);
 
-      printf("Total loss in last second %.2e\n", totalloss/dt);
-      // total cell volume in dm-3: (in metres) * (dm3 in 1 m3)
-      double vol = (100*1e-6 * 100*1e-6 * 10*1e-6) * (10*10*10);
-      printf("vol is %.2e dm3\n", vol);
-      printf("Total ATP = %.2e molecules (%.2e mol) (conc %.2eM)\n", totalATP, totalATP/6e23, totalATP/6e23 / vol);
       //      printf("%.5f %.5f\n", totalloss/dt, totalgain/dt);
     }
   return 0;
