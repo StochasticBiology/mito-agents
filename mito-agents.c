@@ -49,17 +49,18 @@ int main(void)
   vol = (100*1e-6 * 100*1e-6 * 10*1e-6) * (10*10*10);
 	
   // two different experiments: random mito spread or clustering near centre
-  for(expt = 0; expt <= 1; expt++)
+  for(expt = 0; expt <= 2; expt++)
     {
-      for(kappa = 0.01; kappa <= 1; kappa *= 10)
+      for(kappa = 0.01; kappa <= 10; kappa *= 2)
 	{
-	  for(delta = 0.1; delta <= 10; delta *= 10)
+	  for(delta = 0.01; delta <= 10; delta *= 2)
 	    {
 	      printf("Running expt %i, kappa %.2e, delta %.2e\n", expt, kappa, delta);
 	      // initialises positions of mitochondria (x, y are coordinates)
 	      for(i = 0; i < 100; i++)
 		{
-		  if(expt == 0) { x[i] = RND*100; y[i] = RND*100; }
+		  srand48(1);
+		  if(expt != 1) { x[i] = RND*100; y[i] = RND*100; }
 		  else { x[i] = RND*20+40; y[i] = RND*20+40; }
 		  for(j = 0; j < 100; j++)
 		    grid[i*100+j] = 0;
@@ -83,9 +84,12 @@ int main(void)
 			  h = grid[i*100+j];
 			  // finite difference solver with some parameters to capture diffusion
 			  newgrid[i*100+j] = grid[i*100+j] + 2.5e2*(dt*(l + r - 2*h) + dt*(u + d - 2*h));
-			  // uniform loss of ATP everywhere in cell
-			  loss = dt* newgrid[i*100+j]*kappa;
-			  // impose nonnegativity (crudely)
+			  // loss of ATP. in proportion to current concentration; sites of loss depend on model
+			  if(expt == 0 || expt == 1)
+  			    loss = dt* newgrid[i*100+j]*kappa;
+			  else
+			    loss = ((i-50)*(i-50) + (j-50)*(j-50) < 25*25 ? dt* newgrid[i*100+j]*kappa : 0);
+			  // impose nonnegativity (crudely and shouldn't happen
 			  if(newgrid[i*100+j]-loss < 0) newgrid[i*100+j] = 0;
 			  else { newgrid[i*100+j] -= loss; totalloss += loss; }
 			}
@@ -124,7 +128,7 @@ int main(void)
 
 		      if((int)t < 5 || (int)t % 100 == 0)
 			{
-			  sprintf(fstr, "out-%i-%.2e-%.2e-%i.txt", expt, kappa, delta, (int)t);
+			  sprintf(fstr, "out-%i-%.2f-%.2f-%i.txt", expt, kappa, delta, (int)t);
 			  fp = fopen(fstr, "w");
 			  for(i = 0; i < 100; i++)
 			    {
