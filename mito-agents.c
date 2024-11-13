@@ -178,6 +178,20 @@ int main(int argc, char *argv[])
 	  fprintf(fp, "%i,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,1\n", expt, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, totalloss/dt);
 	  fclose(fp);
 
+	  // output equilibrated state
+	  sprintf(fstr, "out-%i-%.2f-%.2f-%i.txt", expt, kappa, delta, (int)t);
+	  fp = fopen(fstr, "w");
+	  for(i = 0; i < 100; i++)
+	    {
+	      for(j = 0; j < 100; j++)
+		{
+		  fprintf(fp, "%i %i %.5f\n", i, j, grid[i*100+j]);
+		  total += grid[i*100+j];
+		}
+	      fprintf(fp, "\n");
+	    }
+	  fclose(fp);
+
 	  // final output details of mitos
 	  sprintf(fstr, "mitos-%i.txt", expt);
 	  fp = fopen(fstr, "w");
