@@ -7,6 +7,9 @@ df.2 = read.csv("stats-2.csv")
 df.3 = read.csv("stats-3.csv")
 df = rbind(df.0, df.1, df.2, df.3)
 
+expt.labels = c("Uni M, Uni C", "Clu M, Uni C", "Uni M, Clu C", "Clu M, Clu C")
+df$expt.label = expt.labels[df$expt+1]
+
 ###### RQ1. When is a reasonable fold range in ATP supported at equilibrium?
 # we are interested in whether bio-reasonable parameters can support high fold-changes in ATP conc
 
@@ -68,9 +71,9 @@ p.3 = ggplot() +
             aes(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax),
             fill = "lightblue") +
   geom_point(data = df[df$terminated==1,], 
-             aes(x=consumption, y=total.ATP, size=log10(fold.range), color=log10(fold.range), label=kappa)) +
+             aes(x=consumption, y=total.ATP, size=log10(fold.range), color=log10(fold.range))) +
   scale_x_continuous(transform = "log10") + 
-  scale_y_continuous(transform = "log10") + facet_wrap(~expt, scales = "free")
+  scale_y_continuous(transform = "log10") + facet_wrap(~expt.label, scales = "free")
 
 p.3
 # so model 0 shows only limited maximal values; model 1 more; model 2 very high
@@ -99,7 +102,7 @@ for(expt in 1:4) {
     snaps = c("out-2-0.01-0.01-1.txt", "out-2-0.01-0.01-2.txt", "out-2-0.01-0.01-4.txt", paste0("out-2-0.01-0.01-", terms[3], ".txt", collapse=""))
     #snaps = c("out-2-0.08-5.12-1.txt", "out-2-0.08-5.12-4.txt", "out-2-2.56-0.01-100.txt", "out-2-2.56-0.01-400.txt")
     snaps.m = rep("mitos-2.txt", 4)
-  } else if(expt == 3) {
+  } else if(expt == 4) {
     snaps = c("out-3-0.01-0.01-1.txt", "out-3-0.01-0.01-2.txt", "out-3-0.01-0.01-4.txt", paste0("out-3-0.01-0.01-", terms[4], ".txt", collapse=""))
     #snaps = c("out-2-0.08-5.12-1.txt", "out-2-0.08-5.12-4.txt", "out-2-2.56-0.01-100.txt", "out-2-2.56-0.01-400.txt")
     snaps.m = rep("mitos-3.txt", 4)
@@ -120,5 +123,6 @@ for(expt in 1:4) {
 ggarrange(ggarrange(plotlist=p.list[[1]], nrow=1),
           ggarrange(plotlist=p.list[[2]], nrow=1),
           ggarrange(plotlist=p.list[[3]], nrow=1), 
-          ggarrange(plotlist=p.list[[4]], nrow=1), nrow=4)
+          ggarrange(plotlist=p.list[[4]], nrow=1),
+          labels = expt.labels, nrow=4)
 
