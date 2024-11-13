@@ -75,8 +75,8 @@ int main(int argc, char *argv[])
 	  for(i = 0; i < 100; i++)
 	    {
 	      // if expt == 1, cluster near centre; otherwise spead evenly
-	      if(expt == 0 || expt == 1) { x[i] = RND*100; y[i] = RND*100; }
-	      if(expt == 2 || expt == 3) { x[i] = RND*20+40; y[i] = RND*20+40; }
+	      if(expt == 0 || expt == 2) { x[i] = RND*100; y[i] = RND*100; }
+	      if(expt == 1 || expt == 3) { x[i] = RND*20+40; y[i] = RND*20+40; }
 	      for(j = 0; j < 100; j++)
 		grid[i*100+j] = 0;
 	    }
