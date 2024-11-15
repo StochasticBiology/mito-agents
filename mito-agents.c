@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
   newgrid = (double*)malloc(sizeof(double)*GRIDX*GRIDY);
 
   // open file for output. we'll store statistics of each situation by timestep; we'll also (later) store snapshots of individual cases
-  sprintf(masterfstr, "stats-%i-%e.csv", expt, mparam);
+  sprintf(masterfstr, "stats-%i.csv", expt);
   fp = fopen(masterfstr, "w");
   fprintf(fp, "expt,mparam,kappa,delta,t,total.ATP,ex.molar,min.ATP,max.ATP,change.ATP,consumption,terminated\n");
   fclose(fp);
@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
 	  fclose(fp);
 
 	  // output equilibrated state
-	  sprintf(fstr, "out-%i-%e-%.2f-%.2f-%i.txt", expt, mparam, kappa, delta, (int)t);
+	  sprintf(fstr, "out-%i-%.2f-%.2f-%i.txt", expt, kappa, delta, (int)t);
 	  fp = fopen(fstr, "w");
 	  for(i = 0; i < GRIDX; i++)
 	    {
@@ -299,7 +299,7 @@ int main(int argc, char *argv[])
 	  fclose(fp);
 
 	  // final output details of mitos
-	  sprintf(fstr, "mitos-%i-%e.txt", expt, mparam);
+	  sprintf(fstr, "mitos-%i.txt", expt);
 	  fp = fopen(fstr, "w");
 	  for(m = 0; m < NMITO; m++)
 	    fprintf(fp, "%.3f %.3f\n", x[m], y[m]);
