@@ -131,6 +131,17 @@ int main(int argc, char *argv[])
 	  // initialise change trackers
 	  lastt = -1; changeATP = 1; totalATP = lastATP = 0;
 
+	  // initialise output files
+	  if(expt == 4 || expt == 5 || expt == 6 || expt == 7)
+	    {
+	      sprintf(fstr, "out-mitos-%i-%.2f-%.2f.txt", expt, kappa, delta);
+	      fp = fopen(fstr, "w");
+	      fclose(fp);
+	    }
+	  sprintf(fstr, "out-%i-%.2f-%.2f.txt", expt, kappa, delta);
+	  fp = fopen(fstr, "w");
+	  fclose(fp);
+			  
 	  // loop until a time threshold or until equilibration criterion is met
 	  for(t = 0; t < 1000.1 && changeATP > dt*1e-4*totalATP; t+=dt)
 	    {
@@ -239,8 +250,8 @@ int main(int argc, char *argv[])
 
 		  if(expt == 4 || expt == 5 || expt == 6 || expt == 7)
 		    {
-		      sprintf(fstr, "out-mitos-%i-%.2f-%.2f-%i.txt", expt, kappa, delta, (int)t);
-		      fp = fopen(fstr, "w");
+		      sprintf(fstr, "out-mitos-%i-%.2f-%.2f.txt", expt, kappa, delta);
+		      fp = fopen(fstr, "a");
 		      for(m = 0; m < NMITO; m++)
 			fprintf(fp, "%i %i %f %f\n", (int) t, m, x[m], y[m]);
 		      fclose(fp);
@@ -249,13 +260,13 @@ int main(int argc, char *argv[])
 		  // take full snapshots of early behaviour and subsequent changes
 		  if((int)t < 5 || (int)t % 100 == 0)
 		    {
-		      sprintf(fstr, "out-%i-%.2f-%.2f-%i.txt", expt, kappa, delta, (int)t);
-		      fp = fopen(fstr, "w");
+		      sprintf(fstr, "out-%i-%.2f-%.2f.txt", expt, kappa, delta);
+		      fp = fopen(fstr, "a");
 		      for(i = 0; i < GRIDX; i++)
 			{
 			  for(j = 0; j < GRIDY; j++)
 			    {
-			      fprintf(fp, "%i %i %.5f\n", i, j, grid[i*GRIDY+j]);
+			      fprintf(fp, "%i %i %i %.5f\n", (int) t, i, j, grid[i*GRIDY+j]);
 			      total += grid[i*GRIDY+j];
 			    }
 			  fprintf(fp, "\n");
