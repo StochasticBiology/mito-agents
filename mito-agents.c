@@ -18,18 +18,46 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
+
+#define NMITO 100
+#define GRIDX 100
+#define GRIDY 100
 
 #define RND drand48()
+
+// produce gaussian random number
+double gsl_ran_gaussian(const double sigma)
+{
+  double x, y, r2;
+
+  do
+    {
+      /* choose x,y in uniform square (-1,-1) to (+1,+1) */
+
+      x = -1 + 2 * RND;
+      y = -1 + 2 * RND;
+
+      /* see if it is in the unit circle */
+      r2 = x * x + y * y;
+    }
+  while (r2 > 1.0 || r2 == 0);
+
+  /* Box-Muller transform */
+  return sigma * y * sqrt (-2.0 * log (r2) / r2);
+}
+
 
 int main(int argc, char *argv[])
 {
   double *grid, *newgrid;
-  int x[100], y[100];
+  double x[NMITO], y[NMITO];
   FILE *fp;
   char fstr[100];
   double loss, totalloss, totalgain;
   double h, l, r, u, d;
   int i, j;
+  int m;
   double t;
   double dt = 0.001;
   int lastt;
@@ -39,26 +67,38 @@ int main(int argc, char *argv[])
   double kappa, delta;
   double vol;
   char masterfstr[100];
+  double mparam = 0;
+  double dx, dy, gradx, grady, norm;
   
-  // different experiments: (0) uniform mitos, uniform consumption; (1) clustered mitos, uniform consumption;
-  //                        (2) uniform mitos, clustered consumption; (3) clustered mitos, clustered consumption
-  if(argc != 2) {
-    printf("Please specify an experiment! 0-3\n");
+  // different experiments: (0) uniform mitos, uniform consumption; (1) uniform mitos, clustered consumption;
+  //                        (2) clustered mitos, uniform consumption; (3) clustered mitos, clustered consumption
+  //                        (4) mobile-1 mitos, uniform consumption; (5) mobile-1 mitos, clustered consumption;
+  //                        (6) mobile-2 mitos, uniform consumption; (7) mobile-2 mitos, clustered consumption
+  if(argc < 2) {
+    printf("Please specify an experiment! 0-7\n");
     return 0;
   }
   expt = atoi(argv[1]);
+  if(expt == 4 || expt == 5 || expt == 6 || expt == 7) {
+    if(argc < 3) {
+      printf("This experiment needs a motion parameter!\n");
+      return 0;
+    }
+    mparam = atof(argv[2]);
+  }
 	   
-  // allocate memory to store 100x100 grid of ATP concentration values
-  grid = (double*)malloc(sizeof(double)*100*100);
-  newgrid = (double*)malloc(sizeof(double)*100*100);
+  // allocate memory to store GRIDXx100 grid of ATP concentration values
+  grid = (double*)malloc(sizeof(double)*GRIDX*GRIDY);
+  newgrid = (double*)malloc(sizeof(double)*GRIDX*GRIDY);
 
   // open file for output. we'll store statistics of each situation by timestep; we'll also (later) store snapshots of individual cases
-  sprintf(masterfstr, "stats-%i.csv", expt);
+  sprintf(masterfstr, "stats-%i-%e.csv", expt, mparam);
   fp = fopen(masterfstr, "w");
-  fprintf(fp, "expt,kappa,delta,t,total.ATP,ex.molar,min.ATP,max.ATP,change.ATP,consumption,terminated\n");
+  fprintf(fp, "expt,mparam,kappa,delta,t,total.ATP,ex.molar,min.ATP,max.ATP,change.ATP,consumption,terminated\n");
   fclose(fp);
 
   // total cell volume in dm-3: (in metres) * (dm3 in 1 m3)
+  // NB -- if you change GRIDX and GRIDY, space units will no longer correspond to um unless this is also changed
   vol = (100*1e-6 * 100*1e-6 * 10*1e-6) * (10*10*10);
 	
   // kappa is the rate constant of ATP consumption
@@ -72,13 +112,19 @@ int main(int argc, char *argv[])
 	  srand48(1);
 	      
 	  // initialises positions of mitochondria (x, y are coordinates)
-	  for(i = 0; i < 100; i++)
+	  for(m = 0; m < NMITO; m++)
 	    {
 	      // if expt == 1, cluster near centre; otherwise spead evenly
-	      if(expt == 0 || expt == 2) { x[i] = RND*100; y[i] = RND*100; }
-	      if(expt == 1 || expt == 3) { x[i] = RND*20+40; y[i] = RND*20+40; }
-	      for(j = 0; j < 100; j++)
-		grid[i*100+j] = 0;
+	      if(expt == 0 || expt == 1) { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
+	      if(expt == 2 || expt == 3) { x[m] = RND*20+40; y[m] = RND*20+40; }
+	      if(expt == 4 || expt == 5) { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
+	      if(expt == 6 || expt == 7) { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
+	    }
+
+	  for(i = 0; i < GRIDX; i++)
+	    {
+	      for(j = 0; j < GRIDY; j++)
+		grid[i*GRIDY+j] = 0;
 	    }
 
 	  // discrete time PDE solver (very crude)
@@ -90,48 +136,88 @@ int main(int argc, char *argv[])
 	    {
 	      totalloss = totalgain = 0;
 	      // actual PDE "solver": loop through each element of our discretised domain
-	      for(i = 0; i < 100; i++)
+	      for(i = 0; i < GRIDX; i++)
 		{
-		  for(j = 0; j < 100; j++)
+		  for(j = 0; j < GRIDY; j++)
 		    {
 		      // find neighbours of this cell element -- using periodic boundary conditions
-		      l = (i == 0 ? grid[1*100+j] : grid[(i-1)*100+j]);
-		      r = (i == 99 ? grid[98*100+j] : grid[(i+1)*100+j]);
-		      u = (j == 0 ? grid[i*100+1] : grid[i*100+j-1]);
-		      d = (j == 99 ? grid[i*100+98] : grid[i*100+j+1]);
-		      h = grid[i*100+j];
+		      l = (i == 0 ? grid[1*GRIDY+j] : grid[(i-1)*GRIDY+j]);
+		      r = (i == GRIDX-1 ? grid[(GRIDX-2)*GRIDY+j] : grid[(i+1)*GRIDY+j]);
+		      u = (j == 0 ? grid[i*GRIDY+1] : grid[i*GRIDY+j-1]);
+		      d = (j == GRIDY-1 ? grid[i*GRIDY+(GRIDY-2)] : grid[i*GRIDY+j+1]);
+		      h = grid[i*GRIDY+j];
 			  
 		      // finite difference solver with some parameters to capture diffusion
-		      newgrid[i*100+j] = grid[i*100+j] + 2.5e2*(dt*(l + r - 2*h) + dt*(u + d - 2*h));
+		      newgrid[i*GRIDY+j] = grid[i*GRIDY+j] + 2.5e2*(dt*(l + r - 2*h) + dt*(u + d - 2*h));
 			  
 		      // loss of ATP. in proportion to current concentration; sites of loss depend on model
-		      if(expt == 0 || expt == 1)
-			loss = dt* newgrid[i*100+j]*kappa;
-		      if(expt == 2 || expt == 3)
-			loss = ((i-50)*(i-50) + (j-50)*(j-50) < 25*25 ? dt* newgrid[i*100+j]*kappa*100 : 0);
+		      if(expt == 0 || expt == 2 || expt == 4 || expt == 6)
+			loss = dt* newgrid[i*GRIDY+j]*kappa;
+		      if(expt == 1 || expt == 3 || expt == 5 || expt == 7)
+			loss = ((i-50)*(i-50) + (j-50)*(j-50) < 25*25 ? dt* newgrid[i*GRIDY+j]*kappa*100 : 0);
 			  
 		      // impose nonnegativity (crudely, and shouldn't happen)
-		      if(newgrid[i*100+j]-loss < 0) newgrid[i*100+j] = 0;
-		      else { newgrid[i*100+j] -= loss; totalloss += loss; }
+		      if(newgrid[i*GRIDY+j]-loss < 0) newgrid[i*GRIDY+j] = 0;
+		      else { newgrid[i*GRIDY+j] -= loss; totalloss += loss; }
 		    }
 		}
 	      // the above took care of loss and diffusion, now take care of production terms
-	      // loop through the 100 mitos and add point ATP mass at each position
-	      for(i = 0; i < 100; i++)
+	      // loop through the NMITO mitos and add point ATP mass at each position
+	      for(m = 0; m < NMITO; m++)
 		{
-		  newgrid[x[i]*100+y[i]] += delta*1e7*dt; // for reference, consumption is 10^9 per cell per sec and we have 10^2 mitos
+		  newgrid[(int)(x[m])*GRIDY+(int)(y[m])] += delta*1e7*dt; // for reference, consumption is 10^9 per cell per sec and we have 10^2 mitos
 		  totalgain += delta*1e7*dt;
 		}
+
+	      // move our mitochondria, if required
+	      if(expt == 4 || expt == 5 || expt == 6 || expt == 7) {
+		for(m = 0; m < NMITO; m++)
+		  {
+		    i = x[m]; j = y[m];
+		    // find neighbours of this mito -- using periodic boundary conditions
+		    l = (i == 0 ? grid[1*GRIDY+j] : grid[(i-1)*GRIDY+j]);
+		    r = (i == GRIDX-1 ? grid[(GRIDX-2)*GRIDY+j] : grid[(i+1)*GRIDY+j]);
+		    u = (j == 0 ? grid[i*GRIDY+1] : grid[i*GRIDY+j-1]);
+		    d = (j == GRIDY-1 ? grid[i*GRIDY+GRIDY-2] : grid[i*GRIDY+j+1]);
+		    h = grid[i*GRIDY+j];
+
+
+		    if(expt == 4 || expt == 5) {
+		      dx = gsl_ran_gaussian(mparam*h);
+		      dy = gsl_ran_gaussian(mparam*h);
+		    }
+		    if(expt == 6 || expt == 7) {
+		      gradx = (r-l)/2.;
+		      grady = (u-d)/2.;
+		      norm = sqrt(gradx*gradx + grady*grady);
+		      if(norm == 0) { dx = dy = 0; }
+		      else {
+			dx = -mparam*gradx/norm;
+			dy = -mparam*grady/norm;
+		      }
+		    }
+		    x[m] += dx*dt;
+		    y[m] += dy*dt;
+		    if(x[m] > 2*GRIDX || y[m] > 2*GRIDY || x[m] < -GRIDX || y[m] < -GRIDY) {
+		      printf("Way out of bounds!\n");
+		      return 0;
+		    }
+		    if(x[m] > GRIDX) x[m] = x[m]-GRIDX;
+		    if(x[m] < 0) x[m] = x[m]+GRIDX;
+		    if(y[m] > GRIDY) y[m] = y[m]-GRIDY;
+		    if(y[m] < 0) y[m] = y[m]+GRIDY;
+		  }
+	      }
 	      // finally, update new state of cell from buffer
 	      totalATP = 0; minATP = 1e100; maxATP = 0; 
-	      for(i = 0; i < 100; i++)
+	      for(i = 0; i < GRIDX; i++)
 		{
-		  for(j = 0; j < 100; j++)
+		  for(j = 0; j < GRIDY; j++)
 		    {
-		      grid[i*100+j] = newgrid[i*100+j];
-		      if(grid[i*100+j] < minATP) minATP = grid[i*100+j];
-		      if(grid[i*100+j] > maxATP) maxATP = grid[i*100+j];
-		      totalATP += grid[i*100+j];
+		      grid[i*GRIDY+j] = newgrid[i*GRIDY+j];
+		      if(grid[i*GRIDY+j] < minATP) minATP = grid[i*GRIDY+j];
+		      if(grid[i*GRIDY+j] > maxATP) maxATP = grid[i*GRIDY+j];
+		      totalATP += grid[i*GRIDY+j];
 		    }
 		}
 	      // record change in ATP for equilibration tracker
@@ -148,20 +234,29 @@ int main(int argc, char *argv[])
 
 		  // output stats snapshot
 		  fp = fopen(masterfstr, "a");
-		  fprintf(fp, "%i,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,0\n", expt, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, totalloss/dt);
+		  fprintf(fp, "%i,%e,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,0\n", expt, mparam, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, totalloss/dt);
 		  fclose(fp);
 
+		  if(expt == 4 || expt == 5 || expt == 6 || expt == 7)
+		    {
+		      sprintf(fstr, "out-mitos-%i-%.2f-%.2f-%i.txt", expt, kappa, delta, (int)t);
+		      fp = fopen(fstr, "w");
+		      for(m = 0; m < NMITO; m++)
+			fprintf(fp, "%i %i %f %f\n", (int) t, m, x[m], y[m]);
+		      fclose(fp);
+		    }
+		  
 		  // take full snapshots of early behaviour and subsequent changes
 		  if((int)t < 5 || (int)t % 100 == 0)
 		    {
 		      sprintf(fstr, "out-%i-%.2f-%.2f-%i.txt", expt, kappa, delta, (int)t);
 		      fp = fopen(fstr, "w");
-		      for(i = 0; i < 100; i++)
+		      for(i = 0; i < GRIDX; i++)
 			{
-			  for(j = 0; j < 100; j++)
+			  for(j = 0; j < GRIDY; j++)
 			    {
-			      fprintf(fp, "%i %i %.5f\n", i, j, grid[i*100+j]);
-			      total += grid[i*100+j];
+			      fprintf(fp, "%i %i %.5f\n", i, j, grid[i*GRIDY+j]);
+			      total += grid[i*GRIDY+j];
 			    }
 			  fprintf(fp, "\n");
 			}
@@ -175,28 +270,28 @@ int main(int argc, char *argv[])
 	  // this run terminated, either through equilibration or time runout
 	  printf("stopped at %e\n", t);
 	  fp = fopen(masterfstr, "a");
-	  fprintf(fp, "%i,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,1\n", expt, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, totalloss/dt);
+	  fprintf(fp, "%i,%e,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,1\n", expt, mparam, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, totalloss/dt);
 	  fclose(fp);
 
 	  // output equilibrated state
-	  sprintf(fstr, "out-%i-%.2f-%.2f-%i.txt", expt, kappa, delta, (int)t);
+	  sprintf(fstr, "out-%i-%e-%.2f-%.2f-%i.txt", expt, mparam, kappa, delta, (int)t);
 	  fp = fopen(fstr, "w");
-	  for(i = 0; i < 100; i++)
+	  for(i = 0; i < GRIDX; i++)
 	    {
-	      for(j = 0; j < 100; j++)
+	      for(j = 0; j < GRIDY; j++)
 		{
-		  fprintf(fp, "%i %i %.5f\n", i, j, grid[i*100+j]);
-		  total += grid[i*100+j];
+		  fprintf(fp, "%i %i %.5f\n", i, j, grid[i*GRIDY+j]);
+		  total += grid[i*GRIDY+j];
 		}
 	      fprintf(fp, "\n");
 	    }
 	  fclose(fp);
 
 	  // final output details of mitos
-	  sprintf(fstr, "mitos-%i.txt", expt);
+	  sprintf(fstr, "mitos-%i-%e.txt", expt, mparam);
 	  fp = fopen(fstr, "w");
-	  for(i = 0; i < 100; i++)
-	    fprintf(fp, "%i %i\n", x[i], y[i]);
+	  for(m = 0; m < NMITO; m++)
+	    fprintf(fp, "%.3f %.3f\n", x[m], y[m]);
 	  fclose(fp);
 	}
     }
