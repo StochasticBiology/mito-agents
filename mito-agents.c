@@ -47,6 +47,12 @@ double gsl_ran_gaussian(const double sigma)
   return sigma * y * sqrt (-2.0 * log (r2) / r2);
 }
 
+int myround(double x)
+{
+  int xi = (int)x;
+  if(x-xi > 0.5) return xi+1;
+  return xi;
+}
 
 int main(int argc, char *argv[])
 {
@@ -172,19 +178,12 @@ int main(int argc, char *argv[])
 		      else { newgrid[i*GRIDY+j] -= loss; totalloss += loss; }
 		    }
 		}
-	      // the above took care of loss and diffusion, now take care of production terms
-	      // loop through the NMITO mitos and add point ATP mass at each position
-	      for(m = 0; m < NMITO; m++)
-		{
-		  newgrid[(int)(x[m])*GRIDY+(int)(y[m])] += delta*1e7*dt; // for reference, consumption is 10^9 per cell per sec and we have 10^2 mitos
-		  totalgain += delta*1e7*dt;
-		}
 
 	      // move our mitochondria, if required
 	      if(expt == 4 || expt == 5 || expt == 6 || expt == 7) {
 		for(m = 0; m < NMITO; m++)
 		  {
-		    i = x[m]; j = y[m];
+		    i = myround(x[m]); j = myround(y[m]);
 		    // find neighbours of this mito -- using periodic boundary conditions
 		    l = (i == 0 ? grid[1*GRIDY+j] : grid[(i-1)*GRIDY+j]);
 		    r = (i == GRIDX-1 ? grid[(GRIDX-2)*GRIDY+j] : grid[(i+1)*GRIDY+j]);
@@ -201,10 +200,17 @@ int main(int argc, char *argv[])
 		      gradx = (r-l)/2.;
 		      grady = (u-d)/2.;
 		      norm = sqrt(gradx*gradx + grady*grady);
-		      if(norm == 0) { dx = dy = 0; }
+		      if(norm == 0)
+			{
+			  dx = gsl_ran_gaussian(1);
+			  dy = gsl_ran_gaussian(1);
+			}
 		      else {
-			dx = -mparam*gradx/norm;
-			dy = -mparam*grady/norm;
+			double rnd = RND;
+			dx = -mparam*rnd*gradx/norm;
+			dy = mparam*rnd*grady/norm;
+			//	if(t > 400)
+			//  printf("%f %i: %f , l %f r %f d %f u %f, dx %f dy %f\n", t, m, h, l, r, d, u, dx, dy);
 		      }
 		    }
 		    x[m] += dx*dt;
@@ -219,6 +225,14 @@ int main(int argc, char *argv[])
 		    if(y[m] < 0) y[m] = y[m]+GRIDY;
 		  }
 	      }
+	      // the above took care of loss and diffusion, now take care of production terms
+	      // loop through the NMITO mitos and add point ATP mass at each position
+	      for(m = 0; m < NMITO; m++)
+		{
+		  newgrid[myround(x[m])*GRIDY+myround(y[m])] += delta*1e7*dt; // for reference, consumption is 10^9 per cell per sec and we have 10^2 mitos
+		  totalgain += delta*1e7*dt;
+		}
+
 	      // finally, update new state of cell from buffer
 	      totalATP = 0; minATP = 1e100; maxATP = 0; 
 	      for(i = 0; i < GRIDX; i++)
