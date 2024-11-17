@@ -299,13 +299,13 @@ int main(int argc, char *argv[])
 	  fclose(fp);
 
 	  // output equilibrated state
-	  sprintf(fstr, "out-%i-%.2f-%.2f-%i.txt", expt, kappa, delta, (int)t);
+	  sprintf(fstr, "out-%i-%.2f-%.2f.txt", expt, kappa, delta);
 	  fp = fopen(fstr, "w");
 	  for(i = 0; i < GRIDX; i++)
 	    {
 	      for(j = 0; j < GRIDY; j++)
 		{
-		  fprintf(fp, "%i %i %.5f\n", i, j, grid[i*GRIDY+j]);
+		  fprintf(fp, "%i %i %i %.5f\n", (int) t, i, j, grid[i*GRIDY+j]);
 		  total += grid[i*GRIDY+j];
 		}
 	      fprintf(fp, "\n");
