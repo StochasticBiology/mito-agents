@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
   // open file for output. we'll store statistics of each situation by timestep; we'll also (later) store snapshots of individual cases
   sprintf(masterfstr, "stats-%i.csv", expt);
   fp = fopen(masterfstr, "w");
-  fprintf(fp, "expt,mparam,kappa,delta,t,total.ATP,ex.molar,min.ATP,max.ATP,change.ATP,consumption,terminated\n");
+  fprintf(fp, "expt,mparam,kappa,delta,t,total.ATP,ex.molar,min.ATP,max.ATP,change.ATP,mean.ATP,var.ATP,consumption,terminated\n");
   fclose(fp);
 
   // total cell volume in dm-3: (in metres) * (dm3 in 1 m3)
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
 
 		  // output stats snapshot
 		  fp = fopen(masterfstr, "a");
-		  fprintf(fp, "%i,%e,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e0\n", expt, mparam, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, meanATP, varATP, totalloss/dt);
+		  fprintf(fp, "%i,%e,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,0\n", expt, mparam, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, meanATP, varATP, totalloss/dt);
 		  fclose(fp);
 
 		  if(expt == 4 || expt == 5 || expt == 6 || expt == 7)
