@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
   int lastt;
   double total;
   int expt;
-  double totalATP, changeATP, minATP, maxATP, lastATP;
+  double totalATP, totalATP2, changeATP, minATP, maxATP, lastATP, meanATP, meanATP2, varATP;
   double kappa, delta;
   double vol;
   char masterfstr[100];
@@ -234,7 +234,7 @@ int main(int argc, char *argv[])
 		}
 
 	      // finally, update new state of cell from buffer
-	      totalATP = 0; minATP = 1e100; maxATP = 0; 
+	      totalATP = 0; totalATP2 = 0; minATP = 1e100; maxATP = 0; 
 	      for(i = 0; i < GRIDX; i++)
 		{
 		  for(j = 0; j < GRIDY; j++)
@@ -243,11 +243,14 @@ int main(int argc, char *argv[])
 		      if(grid[i*GRIDY+j] < minATP) minATP = grid[i*GRIDY+j];
 		      if(grid[i*GRIDY+j] > maxATP) maxATP = grid[i*GRIDY+j];
 		      totalATP += grid[i*GRIDY+j];
+		      totalATP2 += grid[i*GRIDY+j]*grid[i*GRIDY+j];
 		    }
 		}
 	      // record change in ATP for equilibration tracker
 	      changeATP = totalATP - lastATP;
 	      lastATP = totalATP;
+	      meanATP = totalATP/(GRIDX*GRIDY); meanATP2 = totalATP2/(GRIDX*GRIDY);
+	      varATP = meanATP2 - meanATP*meanATP; 
 
 	      // if we're in a new timestep
 	      if((int)t != lastt)
@@ -259,7 +262,7 @@ int main(int argc, char *argv[])
 
 		  // output stats snapshot
 		  fp = fopen(masterfstr, "a");
-		  fprintf(fp, "%i,%e,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,0\n", expt, mparam, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, totalloss/dt);
+		  fprintf(fp, "%i,%e,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e0\n", expt, mparam, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, meanATP, varATP, totalloss/dt);
 		  fclose(fp);
 
 		  if(expt == 4 || expt == 5 || expt == 6 || expt == 7)
@@ -295,7 +298,7 @@ int main(int argc, char *argv[])
 	  // this run terminated, either through equilibration or time runout
 	  printf("stopped at %e\n", t);
 	  fp = fopen(masterfstr, "a");
-	  fprintf(fp, "%i,%e,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,1\n", expt, mparam, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, totalloss/dt);
+	  fprintf(fp, "%i,%e,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,1\n", expt, mparam, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, meanATP, varATP, totalloss/dt);
 	  fclose(fp);
 
 	  // output equilibrated state
