@@ -86,13 +86,24 @@ p.3 = ggplot() +
   geom_rect(data = data.frame(xmin=5e8, xmax=5e9, ymin=5e9, ymax=5e11), 
             aes(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax),
             fill = "lightblue") +
-  geom_point(data = df[df$terminated==1,], 
+  geom_point(data = df[df$terminated==1 & df$expt<4,], 
              aes(x=consumption, y=total.ATP, size=log10(fold.range), color=log10(fold.range))) +
   scale_x_continuous(transform = "log10") + 
   scale_y_continuous(transform = "log10") + facet_wrap(~expt.label, scales = "free")
 
 p.3
 # so model 0 shows only limited maximal values; model 1 more; model 2 very high
+
+p.3.a = ggplot() +
+  geom_rect(data = data.frame(xmin=5e8, xmax=5e9, ymin=5e9, ymax=5e11), 
+            aes(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax),
+            fill = "lightblue") +
+  geom_point(data = df[df$terminated==1 & df$expt>=4,], 
+             aes(x=consumption, y=total.ATP, size=log10(fold.range), color=log10(fold.range))) +
+  scale_x_continuous(transform = "log10") + 
+  scale_y_continuous(transform = "log10") + facet_wrap(~expt.label, scales = "free")
+
+p.3.a
 
 # check for convergence
 ggplot(df, aes(x=t, y=total.ATP, color=paste(kappa,delta))) + geom_point() + scale_x_continuous(transform = "log10")
@@ -167,10 +178,23 @@ ggplot() +
   geom_point(data=mt.df[mt.df$t == max(mt.df$t),], aes(x=x, y=y, color=factor(mito))) + 
   theme(legend.position="none")
 
-atp.df = read.table("out-6-0.01-2.56.txt", sep=" ", header=FALSE)
+dyn.list = list()
+for(expt in 4:7) {
+fname1 = paste0("out-", expt, "-0.04-2.56.txt", collapse="")
+fname2 = paste0("out-mitos-", expt, "-0.04-2.56.txt", collapse="")
+atp.df = read.table(fname1, sep=" ", header=FALSE)
 colnames(atp.df) = c("t", "x", "y", "ATP")
-mt.df = read.csv("out-mitos-6-0.01-2.56.txt", sep=" ", header=FALSE)
+mt.df = read.csv(fname2, sep=" ", header=FALSE)
 colnames(mt.df) = c("t", "mito", "x", "y")
+dyn.list[[expt-3]] = ggplot() +
+  geom_tile(data = atp.df[atp.df$t == max(atp.df$t),], aes(x=x, y=y, fill=ATP)) +
+  geom_path(size=1,alpha=0.1,data=mt.df[mt.df$t < 1000,], aes(x=x, y=y, group=factor(mito)), color="white") + 
+  geom_point(data=mt.df[mt.df$t == max(mt.df$t),], aes(x=x, y=y), color="white") + 
+  theme(legend.position="none")
+
+}
+ggarrange(plotlist = dyn.list, labels=c("A", "B", "C", "D"))
+
 if(FALSE) {
   ggplot() +
   geom_tile(data = atp.df[atp.df$t == max(atp.df$t),], aes(x=x, y=y, fill=ATP)) +
