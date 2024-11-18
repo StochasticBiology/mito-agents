@@ -113,6 +113,58 @@ ggplot(df, aes(x=t, y=fold.range, color=paste(kappa,delta))) + geom_point() +
 
 #### snapshots of particular instances
 
+dyn.list = list()
+for(expt in 1:8) {
+  dyn.list[[expt]] = list()
+  fname1 = paste0("out-", expt-1, "-0.01-0.01.txt", collapse="")
+  
+  atp.df = read.table(fname1, sep=" ", header=FALSE)
+  colnames(atp.df) = c("t", "x", "y", "ATP")
+  if(expt >= 5) {
+    fname2 = paste0("out-mitos-", expt-1, "-0.01-0.01.txt", collapse="")
+    mt.df = read.csv(fname2, sep=" ", header=FALSE)
+    colnames(mt.df) = c("t", "mito", "x", "y")
+  } else {
+    fname2 = paste0("mitos-", expt-1, ".txt", collapse="")
+    mt.df = read.csv(fname2, sep=" ", header=FALSE)
+    colnames(mt.df) = c("x", "y")
+  }
+  t.set = c(max(atp.df$t))
+  for(i in 1:length(t.set)) {
+    dyn.list[[expt]][[i]] = ggplot() +
+      geom_tile(data = atp.df[atp.df$t == t.set[i],], aes(x=x, y=y, fill=ATP)) +
+      ggtitle(paste0("    ", t.set[i], collapse=""))
+    if(expt >= 5) {
+      dyn.list[[expt]][[i]] = dyn.list[[expt]][[i]] +     
+        geom_path(size=1,alpha=0.1,data=mt.df[mt.df$t < t.set[i],], aes(x=x, y=y, group=factor(mito)), color="white") + 
+        geom_point(data=mt.df[mt.df$t == t.set[i],], aes(x=x, y=y), color="white") 
+    } else {
+      dyn.list[[expt]][[i]] = dyn.list[[expt]][[i]] +     
+        geom_point(data=mt.df, aes(x=x, y=y), color="white")
+    }
+  }
+}
+
+ggarrange(
+  ggarrange(plotlist = dyn.list[[1]], nrow=1),
+  ggarrange(plotlist = dyn.list[[2]], nrow=1),
+  ggarrange(plotlist = dyn.list[[3]], nrow=1),
+  ggarrange(plotlist = dyn.list[[4]], nrow=1),
+  nrow=2, ncol=2
+)
+
+ggarrange(
+  ggarrange(plotlist = dyn.list[[5]], nrow=1),
+  ggarrange(plotlist = dyn.list[[6]], nrow=1),
+  ggarrange(plotlist = dyn.list[[7]], nrow=1),
+  ggarrange(plotlist = dyn.list[[8]], nrow=1),
+  nrow=2, ncol=2
+)
+  
+  
+
+ggarrange(plotlist = dyn.list, labels=c("A", "B", "C", "D"))
+
 p.list = list()
 
 # when do the individual experiments terminate?
