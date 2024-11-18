@@ -5,9 +5,15 @@ df.0 = read.csv("stats-0.csv")
 df.1 = read.csv("stats-1.csv")
 df.2 = read.csv("stats-2.csv")
 df.3 = read.csv("stats-3.csv")
-df = rbind(df.0, df.1, df.2, df.3)
+df.4 = read.csv("stats-4.csv")
+df.5 = read.csv("stats-5.csv")
+df.6 = read.csv("stats-6.csv")
+df.7 = read.csv("stats-7.csv")
+df = rbind(df.0, df.1, df.2, df.3,
+           df.4, df.5, df.6, df.7)
 
-expt.labels = c("Uni M, Uni C", "Clu M, Uni C", "Uni M, Clu C", "Clu M, Clu C")
+expt.labels = c("Uni M, Uni C", "Uni M, Clu C", "Clu M, Uni C", "Clu M, Clu C",
+                "Mo1 M, Uni C", "Mo1 M, Clu C", "Mo2 M, Uni C", "Mo2 M, Clu C")
 df$expt.label = expt.labels[df$expt+1]
 
 ###### RQ1. When is a reasonable fold range in ATP supported at equilibrium?
@@ -19,6 +25,11 @@ df$equilibrated = ifelse(df$terminated == 1 & df$t < 1000, 1, 0)
 
 # did anything fail to equilibrate?
 length(which(df$terminated == 1 & df$equilibrated != 1))
+
+# timescales of equilibration
+hist(log10(df$t[df$equilibrated == 1]))
+max(df$fold.range[df$terminated == 1 & df$expt == 0])
+max(df$fold.range[df$terminated == 1 & df$expt == 1])
 
 # bio-reasonable values for consumption are around 10^9 ATP/cell/s; total ATP around 6e10 ATP/cell
 df.legit = df[df$terminated==1 & 
@@ -36,10 +47,15 @@ order.df = order.df[order.df$equilibrated == 1,]
 head(order.df[order.df$expt==0,])
 head(order.df[order.df$expt==1,])
 head(order.df[order.df$expt==2,])
-
+head(order.df[order.df$expt==3,])
+   
 good.2 = df[df$expt==2 & df$equilibrated==1,]
-good.2[good.2$consumption > 5e8 & good.2$consumption < 5e9 & good.2$total.ATP < 5e9,] 
-# model 2 instances with higher fold ranges generally have lower ATP concentrations
+good.2 = good.2[order(-good.2$fold.range),]
+head(good.2[good.2$consumption > 5e8 & good.2$consumption < 5e9 & good.2$total.ATP < 5e9,] )
+good.3 = df[df$expt==3 & df$equilibrated==1,]
+good.3 = good.3[order(-good.3$fold.range),]
+head(good.3[good.3$consumption > 5e8 & good.3$consumption < 5e9 & good.3$total.ATP < 5e9,])
+# model 2 and 3 instances with higher fold ranges generally have lower ATP concentrations
 
 df.legit[df.legit$expt==2,]
 # these plots aren't very helpful
@@ -89,22 +105,21 @@ ggplot(df, aes(x=t, y=fold.range, color=paste(kappa,delta))) + geom_point() +
 p.list = list()
 
 # when do the individual experiments terminate?
-terms = df$t[df$kappa==0.01 & df$delta==0.01 & df$terminated==1]
+set.snap = df[df$kappa==0.04 & df$delta==2.56 & df$terminated==1,]
+terms = set.snap$t
 
 for(expt in 1:4) {
   if(expt == 1) {
-    snaps = c("out-0-0.01-0.01-1.txt", "out-0-0.01-0.01-2.txt", "out-0-0.01-0.01-4.txt", paste0("out-0-0.01-0.01-", terms[1], ".txt", collapse=""))
+    snaps = c("out-0-0.04-2.56-1.txt", "out-0-0.04-2.56-2.txt", "out-0-0.04-2.56-4.txt", paste0("out-0-0.04-2.56-", terms[1], ".txt", collapse=""))
     snaps.m = rep("mitos-0.txt", 4)
   } else if(expt == 2) {
-    snaps = c("out-1-0.01-0.01-1.txt", "out-1-0.01-0.01-2.txt", "out-1-0.01-0.01-4.txt", paste0("out-1-0.01-0.01-", terms[2], ".txt", collapse=""))
+    snaps = c("out-1-0.04-2.56-1.txt", "out-1-0.04-2.56-2.txt", "out-1-0.04-2.56-4.txt", paste0("out-1-0.04-2.56-", terms[2], ".txt", collapse=""))
     snaps.m = rep("mitos-1.txt", 4)
   } else if(expt == 3) {
-    snaps = c("out-2-0.01-0.01-1.txt", "out-2-0.01-0.01-2.txt", "out-2-0.01-0.01-4.txt", paste0("out-2-0.01-0.01-", terms[3], ".txt", collapse=""))
-    #snaps = c("out-2-0.08-5.12-1.txt", "out-2-0.08-5.12-4.txt", "out-2-2.56-0.01-100.txt", "out-2-2.56-0.01-400.txt")
+    snaps = c("out-2-0.04-2.56-1.txt", "out-2-0.04-2.56-2.txt", "out-2-0.04-2.56-4.txt", paste0("out-2-0.04-2.56-", terms[3], ".txt", collapse=""))
     snaps.m = rep("mitos-2.txt", 4)
   } else if(expt == 4) {
-    snaps = c("out-3-0.01-0.01-1.txt", "out-3-0.01-0.01-2.txt", "out-3-0.01-0.01-4.txt", paste0("out-3-0.01-0.01-", terms[4], ".txt", collapse=""))
-    #snaps = c("out-2-0.08-5.12-1.txt", "out-2-0.08-5.12-4.txt", "out-2-2.56-0.01-100.txt", "out-2-2.56-0.01-400.txt")
+    snaps = c("out-3-0.04-2.56-1.txt", "out-3-0.04-2.56-2.txt", "out-3-0.04-2.56-4.txt", paste0("out-3-0.04-2.56-", terms[4], ".txt", collapse=""))
     snaps.m = rep("mitos-3.txt", 4)
   }
   
@@ -124,5 +139,56 @@ ggarrange(ggarrange(plotlist=p.list[[1]], nrow=1),
           ggarrange(plotlist=p.list[[2]], nrow=1),
           ggarrange(plotlist=p.list[[3]], nrow=1), 
           ggarrange(plotlist=p.list[[4]], nrow=1),
-          labels = expt.labels, nrow=4)
+          labels = paste(expt.labels, round(set.snap$fold.range, digits=2)), 
+          nrow=4)
 
+
+#
+
+mt.df = read.csv("out-mitos-6-0.01-0.01.txt", sep=" ", header=FALSE)
+colnames(mt.df) = c("t", "mito", "x", "y")
+ggplot(mt.df[mt.df$t < 20,], aes(x=x, y=y, color=factor(mito))) + geom_path(size=0.5) + theme(legend.position="none")
+
+mt.df = read.csv("out-mitos-7-0.08-0.01.txt", sep=" ", header=FALSE)
+colnames(mt.df) = c("t", "mito", "x", "y")
+ggplot() +
+  geom_path(data=mt.df[mt.df$t < 100,], aes(x=x, y=y, color=factor(mito))) + 
+  geom_point(data=mt.df[mt.df$t == max(mt.df$t),], aes(x=x, y=y, color=factor(mito))) + 
+  theme(legend.position="none")
+mt.df[mt.df$mito==1,]
+
+atp.df = read.table("out-4-0.01-1.28.txt", sep=" ", header=FALSE)
+colnames(atp.df) = c("t", "x", "y", "ATP")
+mt.df = read.csv("out-mitos-4-0.01-1.28.txt", sep=" ", header=FALSE)
+colnames(mt.df) = c("t", "mito", "x", "y")
+ggplot() +
+  geom_tile(data = atp.df[atp.df$t == max(atp.df$t),], aes(x=x, y=y, fill=ATP)) +
+  geom_point(size=1,alpha=0.1,data=mt.df[mt.df$t < 1000,], aes(x=x, y=y, color=factor(mito))) + 
+  geom_point(data=mt.df[mt.df$t == max(mt.df$t),], aes(x=x, y=y, color=factor(mito))) + 
+  theme(legend.position="none")
+
+atp.df = read.table("out-6-0.01-2.56.txt", sep=" ", header=FALSE)
+colnames(atp.df) = c("t", "x", "y", "ATP")
+mt.df = read.csv("out-mitos-6-0.01-2.56.txt", sep=" ", header=FALSE)
+colnames(mt.df) = c("t", "mito", "x", "y")
+if(FALSE) {
+  ggplot() +
+  geom_tile(data = atp.df[atp.df$t == max(atp.df$t),], aes(x=x, y=y, fill=ATP)) +
+  geom_path(size=1,alpha=0.1,data=mt.df[mt.df$t < 1000,], aes(x=x, y=y, color=factor(mito))) + 
+  geom_point(data=mt.df[mt.df$t == max(mt.df$t),], aes(x=x, y=y, color=factor(mito))) + 
+  theme(legend.position="none")
+}
+
+ggplot() +
+  geom_tile(data = atp.df[atp.df$t == max(atp.df$t),], aes(x=x, y=y, fill=ATP)) +
+  geom_path(size=1,alpha=0.1,data=mt.df[mt.df$t < 1000,], aes(x=x, y=y, group=factor(mito)), color="white") + 
+  geom_point(data=mt.df[mt.df$t == max(mt.df$t),], aes(x=x, y=y), color="white") + 
+  theme(legend.position="none")
+
+ggplot() + geom_path(size=1,alpha=1,data=mt.df[mt.df$t < 0,], aes(x=x, y=y, color=factor(mito))) 
+
+p.list[[expt]][[i]] = ggplot() +
+  geom_tile(data=t.snap, aes(x=V1,y=V2,fill=V3)) +
+  scale_fill_continuous(limits=c(0,NA)) +
+  geom_point(data=t.snap.m, aes(x=V1,y=V2), color="white", size=0.5) +
+  labs(x="", y="", fill="[ATP]")

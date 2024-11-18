@@ -219,10 +219,10 @@ int main(int argc, char *argv[])
 		      printf("Way out of bounds!\n");
 		      return 0;
 		    }
-		    if(x[m] > GRIDX) x[m] = x[m]-GRIDX;
-		    if(x[m] < 0) x[m] = x[m]+GRIDX;
-		    if(y[m] > GRIDY) y[m] = y[m]-GRIDY;
-		    if(y[m] < 0) y[m] = y[m]+GRIDY;
+		    if(x[m] > GRIDX) x[m] = GRIDX;
+		    if(x[m] < 0) x[m] = 0;
+		    if(y[m] > GRIDY) y[m] = GRIDY;
+		    if(y[m] < 0) y[m] = 0;
 		  }
 	      }
 	      // the above took care of loss and diffusion, now take care of production terms
