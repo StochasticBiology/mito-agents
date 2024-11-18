@@ -300,7 +300,7 @@ int main(int argc, char *argv[])
 
 	  // output equilibrated state
 	  sprintf(fstr, "out-%i-%.2f-%.2f.txt", expt, kappa, delta);
-	  fp = fopen(fstr, "w");
+	  fp = fopen(fstr, "a");
 	  for(i = 0; i < GRIDX; i++)
 	    {
 	      for(j = 0; j < GRIDY; j++)
