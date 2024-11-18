@@ -21,8 +21,10 @@
 #include <math.h>
 
 #define NMITO 100
-#define GRIDX 100
-#define GRIDY 100
+#define GRIDX 50
+#define GRIDY 50
+#define CENTRE (GRIDX/2)
+#define CENTRESCALE GRIDX
 
 #define RND drand48()
 
@@ -122,7 +124,7 @@ int main(int argc, char *argv[])
 	    {
 	      // if expt == 1, cluster near centre; otherwise spead evenly
 	      if(expt == 0 || expt == 1) { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
-	      if(expt == 2 || expt == 3) { x[m] = RND*20+40; y[m] = RND*20+40; }
+	      if(expt == 2 || expt == 3) { x[m] = RND*(CENTRE/2)+CENTRE; y[m] = RND*(CENTRE/2)+CENTRE; }
 	      if(expt == 4 || expt == 5) { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
 	      if(expt == 6 || expt == 7) { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
 	    }
@@ -171,7 +173,7 @@ int main(int argc, char *argv[])
 		      if(expt == 0 || expt == 2 || expt == 4 || expt == 6)
 			loss = dt* newgrid[i*GRIDY+j]*kappa;
 		      if(expt == 1 || expt == 3 || expt == 5 || expt == 7)
-			loss = ((i-50)*(i-50) + (j-50)*(j-50) < 25*25 ? dt* newgrid[i*GRIDY+j]*kappa*100 : 0);
+			loss = ((i-CENTRE)*(i-CENTRE) + (j-CENTRE)*(j-CENTRE) < (CENTRE*CENTRE/4) ? dt* newgrid[i*GRIDY+j]*kappa*CENTRESCALE : 0);
 			  
 		      // impose nonnegativity (crudely, and shouldn't happen)
 		      if(newgrid[i*GRIDY+j]-loss < 0) newgrid[i*GRIDY+j] = 0;
@@ -219,9 +221,9 @@ int main(int argc, char *argv[])
 		      printf("Way out of bounds!\n");
 		      return 0;
 		    }
-		    if(x[m] > GRIDX) x[m] = GRIDX;
+		    if(x[m] > GRIDX-1) x[m] = GRIDX-1;
 		    if(x[m] < 0) x[m] = 0;
-		    if(y[m] > GRIDY) y[m] = GRIDY;
+		    if(y[m] > GRIDY-1) y[m] = GRIDY-1;
 		    if(y[m] < 0) y[m] = 0;
 		  }
 	      }
