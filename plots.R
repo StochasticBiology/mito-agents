@@ -1,16 +1,16 @@
 library(ggplot2)
 library(ggpubr)
+library(viridis)
 
-df.0 = read.csv("stats-0.csv")
-df.1 = read.csv("stats-1.csv")
-df.2 = read.csv("stats-2.csv")
-df.3 = read.csv("stats-3.csv")
-df.4 = read.csv("stats-4.csv")
-df.5 = read.csv("stats-5.csv")
-df.6 = read.csv("stats-6.csv")
-df.7 = read.csv("stats-7.csv")
-df = rbind(df.0, df.1, df.2, df.3,
-           df.4, df.5, df.6, df.7)
+gsize = 50
+depth = 10
+
+df = data.frame()
+fnames = paste0("stats-", 0:7, "-", gsize, ".csv")
+for(fname in fnames) {
+  tmp.df = read.csv(fname)
+  df = rbind(df, tmp.df)
+}
 
 expt.labels = c("Uni M, Uni C", "Uni M, Clu C", "Clu M, Uni C", "Clu M, Clu C",
                 "Mo1 M, Uni C", "Mo1 M, Clu C", "Mo2 M, Uni C", "Mo2 M, Clu C")
@@ -21,7 +21,9 @@ df$expt.label = expt.labels[df$expt+1]
 
 # compute fold change across cell, and report for those instances that equilibrated
 df$fold.range = df$max.ATP/df$min.ATP
+df$conc.ATP = df$total.ATP/df$vol.dm3 / 6e23
 df$equilibrated = ifelse(df$terminated == 1 & df$t < 1000, 1, 0)
+df$CV = sqrt(df$var.ATP)/df$mean.ATP
 
 # did anything fail to equilibrate?
 length(which(df$terminated == 1 & df$equilibrated != 1))
@@ -34,13 +36,13 @@ max(df$fold.range[df$terminated == 1 & df$expt == 1])
 # bio-reasonable values for consumption are around 10^9 ATP/cell/s; total ATP around 6e10 ATP/cell
 df.legit = df[df$terminated==1 & 
      df$consumption > 5e8 & df$consumption < 5e9 & 
-     df$total.ATP > 5e10 & df$fold.range > 1.,]
+     df$conc.ATP > 5e-4,]
 df.legit
 # so low(er) ATP concentration is usually necessary for high fold range
 # this typically gives higher consumption values, but not outrageously so
 
 df[df$terminated==1 & 
-     df$total.ATP > 1e11 & df$fold.range > 1.,]
+     df$conc.ATP > 1e-3,]
 
 order.df = df.legit[order(-df.legit$fold.range), ]
 order.df = order.df[order.df$equilibrated == 1,]
@@ -83,16 +85,63 @@ ggarrange(p.1, p.2, nrow=2)
 }
 
 p.3 = ggplot() +
-  geom_rect(data = data.frame(xmin=5e8, xmax=5e9, ymin=5e9, ymax=5e11), 
+  geom_rect(data = data.frame(xmin=5e8, xmax=5e9, ymin=5e-4, ymax=1e-2), 
             aes(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax),
             fill = "lightblue") +
   geom_point(data = df[df$terminated==1 & df$expt<4,], 
-             aes(x=consumption, y=total.ATP, size=log10(fold.range), color=log10(fold.range))) +
+             aes(x=consumption, y=conc.ATP, size=log10(fold.range), color=log10(fold.range))) +
   scale_x_continuous(transform = "log10") + 
   scale_y_continuous(transform = "log10") + facet_wrap(~expt.label, scales = "free")
 
-p.3
+p.3 + scale_color_viridis()
+
+p.3.zoom = ggplot() +
+   geom_point(data = df[df$terminated==1 & 
+                         df$conc.ATP > 5e-4 & df$conc.ATP < 1e-2 &
+                         df$consumption > 1e9,], 
+             aes(x=consumption, y=conc.ATP, size=fold.range, color=fold.range)) +
+  scale_x_continuous(transform = "log10") + 
+  scale_y_continuous(transform = "log10") + facet_wrap(~expt.label, scales = "free")
+
+p.3.zoom + scale_color_viridis()
+
+plot.order = c("Uni M, Uni C",  "Clu M, Uni C", "Mo1 M, Uni C","Mo2 M, Uni C",
+               "Uni M, Clu C", "Clu M, Clu C",  "Mo1 M, Clu C",  "Mo2 M, Clu C")
+
+p.3.zoom.a = ggplot() +
+  geom_point(data = df[df$terminated==1 & 
+                         df$conc.ATP > 5e-4 & df$conc.ATP < 1e-2 &
+                         df$consumption > 1e9,], 
+             aes(x=consumption, y=conc.ATP*1e3, size=CV, color=CV)) +
+  scale_x_continuous(transform = "log10") + 
+  scale_y_continuous(transform = "log10") + 
+  labs(x="ATP consumption / cell⁻¹ s⁻¹", y="[ATP] / mM") +
+  facet_wrap(~factor(expt.label, levels=plot.order), nrow=2, ncol=4)
+
+fname = paste0("cv-zoom-", gsize, ".png", collapse="")
+sf = 2
+png(fname, width=600*sf, height=400*sf, res=72*sf)
+p.3.zoom.a + scale_color_viridis()
+dev.off()
 # so model 0 shows only limited maximal values; model 1 more; model 2 very high
+
+ggplot(df.legit, aes(x=log10(CV), fill=factor(expt.label))) + geom_histogram(position="dodge")
+ggplot(df.legit, aes(x=log10(CV), fill=factor(expt.label))) + geom_density(alpha=0.3) + facet_wrap(~expt.label)
+
+p.3.cv = ggplot() +
+  geom_rect(data = data.frame(xmin=5e8, xmax=5e9, ymin=5e-4, ymax=1e-2), 
+            aes(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax),
+            fill = "lightblue") +
+  geom_point(data = df[df$terminated==1 & df$expt<4,], 
+             aes(x=consumption, y=conc.ATP, size=CV, color=CV)) +
+  scale_x_continuous(transform = "log10") + 
+  scale_y_continuous(transform = "log10") + facet_wrap(~expt.label, scales = "free")
+
+tmp.df = df[df$terminated==1 & df$expt<4,]
+p.3.cv + scale_color_gradientn(
+  colors = c("black", "blue", "white", "red"),
+  values = scales::rescale(c(min(tmp.df$CV), 0.5, 0.5, max(tmp.df$CV)))
+) 
 
 p.3.a = ggplot() +
   geom_rect(data = data.frame(xmin=5e8, xmax=5e9, ymin=5e9, ymax=5e11), 
@@ -114,18 +163,21 @@ ggplot(df, aes(x=t, y=fold.range, color=paste(kappa,delta))) + geom_point() +
 #### snapshots of particular instances
 
 dyn.list = list()
+scale.atp = (depth*1*1) * (1e-6 / 1e-1)**3
+scale.mmol = 1./(6e23 * scale.atp) 
+
 for(expt in 1:8) {
   dyn.list[[expt]] = list()
-  fname1 = paste0("out-", expt-1, "-0.01-0.01.txt", collapse="")
+  fname1 = paste0("out-", expt-1, "-", gsize, "-0.01-0.01.txt", collapse="")
   
   atp.df = read.table(fname1, sep=" ", header=FALSE)
   colnames(atp.df) = c("t", "x", "y", "ATP")
   if(expt >= 5) {
-    fname2 = paste0("out-mitos-", expt-1, "-0.01-0.01.txt", collapse="")
+    fname2 = paste0("out-mitos-", expt-1, "-", gsize, "-0.01-0.01.txt", collapse="")
     mt.df = read.csv(fname2, sep=" ", header=FALSE)
     colnames(mt.df) = c("t", "mito", "x", "y")
   } else {
-    fname2 = paste0("mitos-", expt-1, ".txt", collapse="")
+    fname2 = paste0("mitos-", expt-1, "-", gsize, ".txt", collapse="")
     mt.df = read.csv(fname2, sep=" ", header=FALSE)
     colnames(mt.df) = c("x", "y")
   }

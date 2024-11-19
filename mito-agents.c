@@ -21,10 +21,7 @@
 #include <math.h>
 
 #define NMITO 100
-#define GRIDX 50
-#define GRIDY 50
-#define CENTRE (GRIDX/2)
-#define CENTRESCALE GRIDX
+#define DEPTH 10
 
 #define RND drand48()
 
@@ -74,40 +71,47 @@ int main(int argc, char *argv[])
   double totalATP, totalATP2, changeATP, minATP, maxATP, lastATP, meanATP, meanATP2, varATP;
   double kappa, delta;
   double vol;
-  char masterfstr[100];
+  char masterfstr[100], snapfstr[100], mitosnapfstr[100];
   double mparam = 0;
   double dx, dy, gradx, grady, norm;
+  int gridsize;
+  int GRIDX, GRIDY;
+  int CENTRE, CENTRESCALE;
   
   // different experiments: (0) uniform mitos, uniform consumption; (1) uniform mitos, clustered consumption;
   //                        (2) clustered mitos, uniform consumption; (3) clustered mitos, clustered consumption
   //                        (4) mobile-1 mitos, uniform consumption; (5) mobile-1 mitos, clustered consumption;
   //                        (6) mobile-2 mitos, uniform consumption; (7) mobile-2 mitos, clustered consumption
-  if(argc < 2) {
-    printf("Please specify an experiment! 0-7\n");
+  if(argc < 3) {
+    printf("Please specify a grid size and an experiment! Experiments 0-7\n");
     return 0;
   }
-  expt = atoi(argv[1]);
+  expt = atoi(argv[2]);
   if(expt == 4 || expt == 5 || expt == 6 || expt == 7) {
-    if(argc < 3) {
+    if(argc < 4) {
       printf("This experiment needs a motion parameter!\n");
       return 0;
     }
-    mparam = atof(argv[2]);
+    mparam = atof(argv[3]);
   }
-	   
+  gridsize = atoi(argv[1]);
+  GRIDX = GRIDY = gridsize;
+  CENTRE = gridsize/2;
+  CENTRESCALE = gridsize;
+  
   // allocate memory to store GRIDXx100 grid of ATP concentration values
   grid = (double*)malloc(sizeof(double)*GRIDX*GRIDY);
   newgrid = (double*)malloc(sizeof(double)*GRIDX*GRIDY);
 
   // open file for output. we'll store statistics of each situation by timestep; we'll also (later) store snapshots of individual cases
-  sprintf(masterfstr, "stats-%i.csv", expt);
+  sprintf(masterfstr, "stats-%i-%i.csv", expt, gridsize);
   fp = fopen(masterfstr, "w");
-  fprintf(fp, "expt,mparam,kappa,delta,t,total.ATP,ex.molar,min.ATP,max.ATP,change.ATP,mean.ATP,var.ATP,consumption,terminated\n");
+  fprintf(fp, "expt,mparam,kappa,delta,t,total.ATP,ex.molar,min.ATP,max.ATP,change.ATP,mean.ATP,var.ATP,vol.dm3,consumption,terminated\n");
   fclose(fp);
 
   // total cell volume in dm-3: (in metres) * (dm3 in 1 m3)
   // NB -- if you change GRIDX and GRIDY, space units will no longer correspond to um unless this is also changed
-  vol = (100*1e-6 * 100*1e-6 * 10*1e-6) * (10*10*10);
+  vol = (GRIDX*1e-6 * GRIDY*1e-6 * DEPTH*1e-6) * (10*10*10);
 	
   // kappa is the rate constant of ATP consumption
   for(kappa = 0.01; kappa <= 10; kappa *= 2)
@@ -124,7 +128,7 @@ int main(int argc, char *argv[])
 	    {
 	      // if expt == 1, cluster near centre; otherwise spead evenly
 	      if(expt == 0 || expt == 1) { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
-	      if(expt == 2 || expt == 3) { x[m] = RND*(CENTRE/2)+CENTRE; y[m] = RND*(CENTRE/2)+CENTRE; }
+	      if(expt == 2 || expt == 3) { x[m] = (RND-0.5)*CENTRE+GRIDX/2; y[m] = (RND-0.5)*CENTRE+GRIDY/2; }
 	      if(expt == 4 || expt == 5) { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
 	      if(expt == 6 || expt == 7) { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
 	    }
@@ -142,12 +146,12 @@ int main(int argc, char *argv[])
 	  // initialise output files
 	  if(expt == 4 || expt == 5 || expt == 6 || expt == 7)
 	    {
-	      sprintf(fstr, "out-mitos-%i-%.2f-%.2f.txt", expt, kappa, delta);
-	      fp = fopen(fstr, "w");
+	      sprintf(mitosnapfstr, "out-mitos-%i-%i-%.2f-%.2f.txt", expt, gridsize, kappa, delta);
+	      fp = fopen(mitosnapfstr, "w");
 	      fclose(fp);
 	    }
-	  sprintf(fstr, "out-%i-%.2f-%.2f.txt", expt, kappa, delta);
-	  fp = fopen(fstr, "w");
+	  sprintf(snapfstr, "out-%i-%i-%.2f-%.2f.txt", expt, gridsize, kappa, delta);
+	  fp = fopen(snapfstr, "w");
 	  fclose(fp);
 			  
 	  // loop until a time threshold or until equilibration criterion is met
@@ -215,6 +219,11 @@ int main(int argc, char *argv[])
 			//  printf("%f %i: %f , l %f r %f d %f u %f, dx %f dy %f\n", t, m, h, l, r, d, u, dx, dy);
 		      }
 		    }
+		    // limit to 1 um/s
+		    if(dx > 1) dx = 1;
+		    if(dy > 1) dy = 1;
+		    if(dx < -1) dx = -1;
+		    if(dy < -1) dy = -1;
 		    x[m] += dx*dt;
 		    y[m] += dy*dt;
 		    if(x[m] > 2*GRIDX || y[m] > 2*GRIDY || x[m] < -GRIDX || y[m] < -GRIDY) {
@@ -264,13 +273,13 @@ int main(int argc, char *argv[])
 
 		  // output stats snapshot
 		  fp = fopen(masterfstr, "a");
-		  fprintf(fp, "%i,%e,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,0\n", expt, mparam, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, meanATP, varATP, totalloss/dt);
+		  fprintf(fp, "%i,%e,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,0\n", expt, mparam, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, meanATP, varATP, vol, totalloss/dt);
 		  fclose(fp);
 
 		  if(expt == 4 || expt == 5 || expt == 6 || expt == 7)
 		    {
-		      sprintf(fstr, "out-mitos-%i-%.2f-%.2f.txt", expt, kappa, delta);
-		      fp = fopen(fstr, "a");
+		      //sprintf(fstr, "out-mitos-%i-%.2f-%.2f.txt", expt, kappa, delta);
+		      fp = fopen(mitosnapfstr, "a");
 		      for(m = 0; m < NMITO; m++)
 			fprintf(fp, "%i %i %f %f\n", (int) t, m, x[m], y[m]);
 		      fclose(fp);
@@ -279,8 +288,8 @@ int main(int argc, char *argv[])
 		  // take full snapshots of early behaviour and subsequent changes
 		  if((int)t < 5 || (int)t % 100 == 0)
 		    {
-		      sprintf(fstr, "out-%i-%.2f-%.2f.txt", expt, kappa, delta);
-		      fp = fopen(fstr, "a");
+		      //		      sprintf(fstr, "out-%i-%i-%.2f-%.2f.txt", expt, gridsize, kappa, delta);
+		      fp = fopen(snapfstr, "a");
 		      for(i = 0; i < GRIDX; i++)
 			{
 			  for(j = 0; j < GRIDY; j++)
@@ -300,12 +309,12 @@ int main(int argc, char *argv[])
 	  // this run terminated, either through equilibration or time runout
 	  printf("stopped at %e\n", t);
 	  fp = fopen(masterfstr, "a");
-	  fprintf(fp, "%i,%e,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,1\n", expt, mparam, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, meanATP, varATP, totalloss/dt);
+	  fprintf(fp, "%i,%e,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,1\n", expt, mparam, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, meanATP, varATP, vol, totalloss/dt);
 	  fclose(fp);
 
 	  // output equilibrated state
-	  sprintf(fstr, "out-%i-%.2f-%.2f.txt", expt, kappa, delta);
-	  fp = fopen(fstr, "a");
+	  //sprintf(fstr, "out-%i-%i-%.2f-%.2f.txt", expt, gridsize, kappa, delta);
+	  fp = fopen(snapfstr, "a");
 	  for(i = 0; i < GRIDX; i++)
 	    {
 	      for(j = 0; j < GRIDY; j++)
@@ -318,7 +327,7 @@ int main(int argc, char *argv[])
 	  fclose(fp);
 
 	  // final output details of mitos
-	  sprintf(fstr, "mitos-%i.txt", expt);
+	  sprintf(fstr, "mitos-%i-%i.txt", expt, gridsize);
 	  fp = fopen(fstr, "w");
 	  for(m = 0; m < NMITO; m++)
 	    fprintf(fp, "%.3f %.3f\n", x[m], y[m]);
