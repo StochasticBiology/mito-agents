@@ -25,6 +25,14 @@ df$conc.ATP = df$total.ATP/df$vol.dm3 / 6e23
 df$equilibrated = ifelse(df$terminated == 1 & df$t < 1000, 1, 0)
 df$CV = sqrt(df$var.ATP)/df$mean.ATP
 
+
+ggplot(df[df$terminated == 1,], aes(x=kappa, y=delta, fill=log10(conc.ATP))) + 
+  scale_x_continuous(transform="log2") + 
+  scale_y_continuous(transform="log2") + 
+  geom_tile() + facet_wrap(~expt)
+
+
+
 # did anything fail to equilibrate?
 length(which(df$terminated == 1 & df$equilibrated != 1))
 
@@ -108,21 +116,26 @@ p.3.zoom + scale_color_viridis()
 plot.order = c("Uni M, Uni C",  "Clu M, Uni C", "Mo1 M, Uni C","Mo2 M, Uni C",
                "Uni M, Clu C", "Clu M, Clu C",  "Mo1 M, Clu C",  "Mo2 M, Clu C")
 
+p.2.zoom.a = ggplot() +
+  geom_point(data = df[df$terminated==1 & 
+                         df$conc.ATP > 5e-4 & df$conc.ATP < 1e-2 &
+                         df$consumption > 1e9,], 
+             aes(x=conc.ATP*1e3, y=consumption, size=fold.range, color=fold.range)) +
+  scale_x_continuous(transform = "log10") + 
+  scale_y_continuous(transform = "log10") + 
+  labs(y="ATP consumption / cell⁻¹ s⁻¹", x="[ATP] / mM", color="Fold range", size="Fold range") +
+  facet_wrap(~factor(expt.label, levels=plot.order), nrow=2, ncol=4)
+
 p.3.zoom.a = ggplot() +
   geom_point(data = df[df$terminated==1 & 
                          df$conc.ATP > 5e-4 & df$conc.ATP < 1e-2 &
                          df$consumption > 1e9,], 
-             aes(x=consumption, y=conc.ATP*1e3, size=CV, color=CV)) +
+             aes(x=conc.ATP*1e3, y=consumption, size=CV, color=CV)) +
   scale_x_continuous(transform = "log10") + 
   scale_y_continuous(transform = "log10") + 
-  labs(x="ATP consumption / cell⁻¹ s⁻¹", y="[ATP] / mM") +
+  labs(y="ATP consumption / cell⁻¹ s⁻¹", x="[ATP] / mM") +
   facet_wrap(~factor(expt.label, levels=plot.order), nrow=2, ncol=4)
 
-fname = paste0("cv-zoom-", gsize, ".png", collapse="")
-sf = 2
-png(fname, width=600*sf, height=400*sf, res=72*sf)
-p.3.zoom.a + scale_color_viridis()
-dev.off()
 # so model 0 shows only limited maximal values; model 1 more; model 2 very high
 
 ggplot(df.legit, aes(x=log10(CV), fill=factor(expt.label))) + geom_histogram(position="dodge")
@@ -162,18 +175,36 @@ ggplot(df, aes(x=t, y=fold.range, color=paste(kappa,delta))) + geom_point() +
 
 #### snapshots of particular instances
 
+# which ones are most comparable and reasonable
+df[df$terminated==1 & df$conc.ATP > 2e-3 & df$conc.ATP < 4e-3,]
+
+if(gsize == 50) {
+kappas = rep(0.01, 8)
+deltas = rep(c(0.32, 5.12), 4)
+}
+if(gsize == 20) {
+  kappas = rep(0.01, 8)
+  deltas = rep(c(0.08, 0.32), 4)
+}
+
+expt = 5
+fname2 = paste0("out-mitos-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], ".txt", collapse="")
+mt.df = read.csv(fname2, sep=" ", header=FALSE)
+colnames(mt.df) = c("t", "mito", "x", "y")
+mt.df[mt.df$mito==0,]
 dyn.list = list()
 scale.atp = (depth*1*1) * (1e-6 / 1e-1)**3
-scale.mmol = 1./(6e23 * scale.atp) 
+scale.mol = 1./(6e23 * scale.atp) 
 
+eq.df = df[df$terminated==1 & df$conc.ATP > 5e-4,]
 for(expt in 1:8) {
   dyn.list[[expt]] = list()
-  fname1 = paste0("out-", expt-1, "-", gsize, "-0.01-0.01.txt", collapse="")
+  fname1 = paste0("out-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], ".txt", collapse="")
   
   atp.df = read.table(fname1, sep=" ", header=FALSE)
   colnames(atp.df) = c("t", "x", "y", "ATP")
   if(expt >= 5) {
-    fname2 = paste0("out-mitos-", expt-1, "-", gsize, "-0.01-0.01.txt", collapse="")
+    fname2 = paste0("out-mitos-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], ".txt", collapse="")
     mt.df = read.csv(fname2, sep=" ", header=FALSE)
     colnames(mt.df) = c("t", "mito", "x", "y")
   } else {
@@ -184,11 +215,13 @@ for(expt in 1:8) {
   t.set = c(max(atp.df$t))
   for(i in 1:length(t.set)) {
     dyn.list[[expt]][[i]] = ggplot() +
-      geom_tile(data = atp.df[atp.df$t == t.set[i],], aes(x=x, y=y, fill=ATP)) +
+      geom_tile(data = atp.df[atp.df$t == t.set[i],], aes(x=x, y=y, fill=ATP*scale.mol*1e3)) +
+      labs(fill="[ATP]/mM") +
       ggtitle(paste0("    ", t.set[i], collapse=""))
     if(expt >= 5) {
       dyn.list[[expt]][[i]] = dyn.list[[expt]][[i]] +     
-        geom_path(size=1,alpha=0.1,data=mt.df[mt.df$t < t.set[i],], aes(x=x, y=y, group=factor(mito)), color="white") + 
+        geom_path(size=1,alpha=0.1,data=mt.df[mt.df$t < t.set[i],], 
+                  aes(x=x, y=y, group=factor(mito)), color="white") + 
         geom_point(data=mt.df[mt.df$t == t.set[i],], aes(x=x, y=y), color="white") 
     } else {
       dyn.list[[expt]][[i]] = dyn.list[[expt]][[i]] +     
@@ -197,7 +230,7 @@ for(expt in 1:8) {
   }
 }
 
-ggarrange(
+g.static = ggarrange(
   ggarrange(plotlist = dyn.list[[1]], nrow=1),
   ggarrange(plotlist = dyn.list[[2]], nrow=1),
   ggarrange(plotlist = dyn.list[[3]], nrow=1),
@@ -205,7 +238,7 @@ ggarrange(
   nrow=2, ncol=2
 )
 
-ggarrange(
+g.dynamic = ggarrange(
   ggarrange(plotlist = dyn.list[[5]], nrow=1),
   ggarrange(plotlist = dyn.list[[6]], nrow=1),
   ggarrange(plotlist = dyn.list[[7]], nrow=1),
@@ -213,110 +246,39 @@ ggarrange(
   nrow=2, ncol=2
 )
   
+
+######
+sf = 2
+
+fname = paste0("cv-zoom-", gsize, ".png", collapse="")
+png(fname, width=600*sf, height=400*sf, res=72*sf)
+p.3.zoom.a + scale_color_viridis()
+dev.off()
+
+fname = paste0("fr-zoom-", gsize, ".png", collapse="")
+png(fname, width=600*sf, height=400*sf, res=72*sf)
+p.2.zoom.a + scale_color_viridis()
+dev.off()
+
+fname = paste0("snaps-static-", gsize, ".png", collapse="")
+png(fname, width=600*sf, height=400*sf, res=72*sf)
+g.static
+dev.off()
+
+fname = paste0("snaps-dynamic-", gsize, ".png", collapse="")
+png(fname, width=600*sf, height=400*sf, res=72*sf)
+g.dynamic
+dev.off()
+
+fname = paste0("all-", gsize, ".png", collapse="")
+png(fname, width=900*sf, height=600*sf, res=72*sf)
+ggarrange(
+  p.3.zoom.a + scale_color_viridis(),
+  ggarrange(g.static, g.dynamic, nrow=1, labels=c("B", "C")),
+  nrow=2, 
+  labels = c("A", "")
+)
+dev.off()
+
   
-
-ggarrange(plotlist = dyn.list, labels=c("A", "B", "C", "D"))
-
-p.list = list()
-
-# when do the individual experiments terminate?
-set.snap = df[df$kappa==0.04 & df$delta==2.56 & df$terminated==1,]
-terms = set.snap$t
-
-for(expt in 1:4) {
-  if(expt == 1) {
-    snaps = c("out-0-0.04-2.56-1.txt", "out-0-0.04-2.56-2.txt", "out-0-0.04-2.56-4.txt", paste0("out-0-0.04-2.56-", terms[1], ".txt", collapse=""))
-    snaps.m = rep("mitos-0.txt", 4)
-  } else if(expt == 2) {
-    snaps = c("out-1-0.04-2.56-1.txt", "out-1-0.04-2.56-2.txt", "out-1-0.04-2.56-4.txt", paste0("out-1-0.04-2.56-", terms[2], ".txt", collapse=""))
-    snaps.m = rep("mitos-1.txt", 4)
-  } else if(expt == 3) {
-    snaps = c("out-2-0.04-2.56-1.txt", "out-2-0.04-2.56-2.txt", "out-2-0.04-2.56-4.txt", paste0("out-2-0.04-2.56-", terms[3], ".txt", collapse=""))
-    snaps.m = rep("mitos-2.txt", 4)
-  } else if(expt == 4) {
-    snaps = c("out-3-0.04-2.56-1.txt", "out-3-0.04-2.56-2.txt", "out-3-0.04-2.56-4.txt", paste0("out-3-0.04-2.56-", terms[4], ".txt", collapse=""))
-    snaps.m = rep("mitos-3.txt", 4)
-  }
-  
-  p.list[[expt]] = list()
-  for(i in 1:length(snaps)) {
-    t.snap = read.table(snaps[i], sep=" ", header=FALSE)
-    t.snap.m = read.table(snaps.m[i], sep=" ", header=FALSE)
-    p.list[[expt]][[i]] = ggplot() +
-      geom_tile(data=t.snap, aes(x=V1,y=V2,fill=V3)) +
-      scale_fill_continuous(limits=c(0,NA)) +
-      geom_point(data=t.snap.m, aes(x=V1,y=V2), color="white", size=0.5) +
-      labs(x="", y="", fill="[ATP]")
-  }
-}
-
-ggarrange(ggarrange(plotlist=p.list[[1]], nrow=1),
-          ggarrange(plotlist=p.list[[2]], nrow=1),
-          ggarrange(plotlist=p.list[[3]], nrow=1), 
-          ggarrange(plotlist=p.list[[4]], nrow=1),
-          labels = paste(expt.labels, round(set.snap$fold.range, digits=2)), 
-          nrow=4)
-
-
-#
-
-mt.df = read.csv("out-mitos-6-0.01-0.01.txt", sep=" ", header=FALSE)
-colnames(mt.df) = c("t", "mito", "x", "y")
-ggplot(mt.df[mt.df$t < 20,], aes(x=x, y=y, color=factor(mito))) + geom_path(size=0.5) + theme(legend.position="none")
-
-mt.df = read.csv("out-mitos-7-0.08-0.01.txt", sep=" ", header=FALSE)
-colnames(mt.df) = c("t", "mito", "x", "y")
-ggplot() +
-  geom_path(data=mt.df[mt.df$t < 100,], aes(x=x, y=y, color=factor(mito))) + 
-  geom_point(data=mt.df[mt.df$t == max(mt.df$t),], aes(x=x, y=y, color=factor(mito))) + 
-  theme(legend.position="none")
-mt.df[mt.df$mito==1,]
-
-atp.df = read.table("out-4-0.01-1.28.txt", sep=" ", header=FALSE)
-colnames(atp.df) = c("t", "x", "y", "ATP")
-mt.df = read.csv("out-mitos-4-0.01-1.28.txt", sep=" ", header=FALSE)
-colnames(mt.df) = c("t", "mito", "x", "y")
-ggplot() +
-  geom_tile(data = atp.df[atp.df$t == max(atp.df$t),], aes(x=x, y=y, fill=ATP)) +
-  geom_point(size=1,alpha=0.1,data=mt.df[mt.df$t < 1000,], aes(x=x, y=y, color=factor(mito))) + 
-  geom_point(data=mt.df[mt.df$t == max(mt.df$t),], aes(x=x, y=y, color=factor(mito))) + 
-  theme(legend.position="none")
-
-dyn.list = list()
-for(expt in 4:7) {
-fname1 = paste0("out-", expt, "-0.04-2.56.txt", collapse="")
-fname2 = paste0("out-mitos-", expt, "-0.04-2.56.txt", collapse="")
-atp.df = read.table(fname1, sep=" ", header=FALSE)
-colnames(atp.df) = c("t", "x", "y", "ATP")
-mt.df = read.csv(fname2, sep=" ", header=FALSE)
-colnames(mt.df) = c("t", "mito", "x", "y")
-dyn.list[[expt-3]] = ggplot() +
-  geom_tile(data = atp.df[atp.df$t == max(atp.df$t),], aes(x=x, y=y, fill=ATP)) +
-  geom_path(size=1,alpha=0.1,data=mt.df[mt.df$t < 1000,], aes(x=x, y=y, group=factor(mito)), color="white") + 
-  geom_point(data=mt.df[mt.df$t == max(mt.df$t),], aes(x=x, y=y), color="white") + 
-  theme(legend.position="none")
-
-}
-ggarrange(plotlist = dyn.list, labels=c("A", "B", "C", "D"))
-
-if(FALSE) {
-  ggplot() +
-  geom_tile(data = atp.df[atp.df$t == max(atp.df$t),], aes(x=x, y=y, fill=ATP)) +
-  geom_path(size=1,alpha=0.1,data=mt.df[mt.df$t < 1000,], aes(x=x, y=y, color=factor(mito))) + 
-  geom_point(data=mt.df[mt.df$t == max(mt.df$t),], aes(x=x, y=y, color=factor(mito))) + 
-  theme(legend.position="none")
-}
-
-ggplot() +
-  geom_tile(data = atp.df[atp.df$t == max(atp.df$t),], aes(x=x, y=y, fill=ATP)) +
-  geom_path(size=1,alpha=0.1,data=mt.df[mt.df$t < 1000,], aes(x=x, y=y, group=factor(mito)), color="white") + 
-  geom_point(data=mt.df[mt.df$t == max(mt.df$t),], aes(x=x, y=y), color="white") + 
-  theme(legend.position="none")
-
-ggplot() + geom_path(size=1,alpha=1,data=mt.df[mt.df$t < 0,], aes(x=x, y=y, color=factor(mito))) 
-
-p.list[[expt]][[i]] = ggplot() +
-  geom_tile(data=t.snap, aes(x=V1,y=V2,fill=V3)) +
-  scale_fill_continuous(limits=c(0,NA)) +
-  geom_point(data=t.snap.m, aes(x=V1,y=V2), color="white", size=0.5) +
-  labs(x="", y="", fill="[ATP]")
+ggplot(df[df$terminated==1,], aes(x=fold.range, y=CV)) + geom_point()

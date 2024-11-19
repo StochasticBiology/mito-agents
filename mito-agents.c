@@ -220,10 +220,10 @@ int main(int argc, char *argv[])
 		      }
 		    }
 		    // limit to 1 um/s
-		    if(dx > 1) dx = 1;
-		    if(dy > 1) dy = 1;
-		    if(dx < -1) dx = -1;
-		    if(dy < -1) dy = -1;
+		    /*		    if(dx > 10) dx = 10;
+		    if(dy > 10) dy = 10;
+		    if(dx < -10) dx = -10;
+		    if(dy < -10) dy = -10;*/
 		    x[m] += dx*dt;
 		    y[m] += dy*dt;
 		    if(x[m] > 2*GRIDX || y[m] > 2*GRIDY || x[m] < -GRIDX || y[m] < -GRIDY) {
