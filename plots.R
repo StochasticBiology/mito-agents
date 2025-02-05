@@ -120,21 +120,25 @@ p.2.zoom.a = ggplot() +
   geom_point(data = df[df$terminated==1 & 
                          df$conc.ATP > 5e-4 & df$conc.ATP < 1e-2 &
                          df$consumption > 1e9,], 
-             aes(x=conc.ATP*1e3, y=consumption, size=fold.range, color=fold.range)) +
+             aes(x=conc.ATP*1e3, y=consumption, size=fold.range, fill=fold.range), pch=21) +
   scale_x_continuous(transform = "log10") + 
   scale_y_continuous(transform = "log10") + 
-  labs(y="ATP consumption / cell⁻¹ s⁻¹", x="[ATP] / mM", color="Fold range", size="Fold range") +
-  facet_wrap(~factor(expt.label, levels=plot.order), nrow=2, ncol=4)
+  scale_fill_viridis(option="inferno") +
+  labs(y="ATP consumption / cell⁻¹ s⁻¹", x="[ATP] / mM", fill="Fold range", size="Fold range") +
+  facet_wrap(~factor(expt.label, levels=plot.order), nrow=2, ncol=4) +
+  theme_light()
 
 p.3.zoom.a = ggplot() +
   geom_point(data = df[df$terminated==1 & 
                          df$conc.ATP > 5e-4 & df$conc.ATP < 1e-2 &
                          df$consumption > 1e9,], 
-             aes(x=conc.ATP*1e3, y=consumption, size=CV, color=CV)) +
+             aes(x=conc.ATP*1e3, y=consumption, size=CV, fill=CV), pch=21) +
   scale_x_continuous(transform = "log10") + 
   scale_y_continuous(transform = "log10") + 
+  scale_fill_viridis(option="inferno") +
   labs(y="ATP consumption / cell⁻¹ s⁻¹", x="[ATP] / mM") +
-  facet_wrap(~factor(expt.label, levels=plot.order), nrow=2, ncol=4)
+  facet_wrap(~factor(expt.label, levels=plot.order), nrow=2, ncol=4) +
+  theme_light()
 
 # so model 0 shows only limited maximal values; model 1 more; model 2 very high
 
@@ -216,8 +220,8 @@ for(expt in 1:8) {
   for(i in 1:length(t.set)) {
     dyn.list[[expt]][[i]] = ggplot() +
       geom_tile(data = atp.df[atp.df$t == t.set[i],], aes(x=x, y=y, fill=ATP*scale.mol*1e3)) +
-      labs(fill="[ATP]/mM") +
-      ggtitle(paste0("    ", t.set[i], collapse=""))
+      labs(fill="[ATP]/mM") #+
+      #ggtitle(paste0("    ", t.set[i], collapse=""))
     if(expt >= 5) {
       dyn.list[[expt]][[i]] = dyn.list[[expt]][[i]] +     
         geom_path(size=1,alpha=0.1,data=mt.df[mt.df$t < t.set[i],], 
@@ -238,12 +242,30 @@ g.static = ggarrange(
   nrow=2, ncol=2
 )
 
+g.static.labs = ggarrange(
+  ggarrange(plotlist = dyn.list[[1]], nrow=1),
+  ggarrange(plotlist = dyn.list[[2]], nrow=1),
+  ggarrange(plotlist = dyn.list[[3]], nrow=1),
+  ggarrange(plotlist = dyn.list[[4]], nrow=1),
+  nrow=2, ncol=2,
+  labels=c("A", "B", "C", "D")
+)
+
 g.dynamic = ggarrange(
   ggarrange(plotlist = dyn.list[[5]], nrow=1),
   ggarrange(plotlist = dyn.list[[6]], nrow=1),
   ggarrange(plotlist = dyn.list[[7]], nrow=1),
   ggarrange(plotlist = dyn.list[[8]], nrow=1),
   nrow=2, ncol=2
+)
+
+g.dynamic.labs = ggarrange(
+  ggarrange(plotlist = dyn.list[[5]], nrow=1),
+  ggarrange(plotlist = dyn.list[[6]], nrow=1),
+  ggarrange(plotlist = dyn.list[[7]], nrow=1),
+  ggarrange(plotlist = dyn.list[[8]], nrow=1),
+  nrow=2, ncol=2,
+  labels=c("A", "B", "C", "D")
 )
   
 
@@ -252,7 +274,7 @@ sf = 2
 
 fname = paste0("cv-zoom-", gsize, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
-p.3.zoom.a + scale_color_viridis()
+p.3.zoom.a 
 dev.off()
 
 fname = paste0("fr-zoom-", gsize, ".png", collapse="")
@@ -262,12 +284,12 @@ dev.off()
 
 fname = paste0("snaps-static-", gsize, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
-g.static
+g.static.labs
 dev.off()
 
 fname = paste0("snaps-dynamic-", gsize, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
-g.dynamic
+g.dynamic.labs
 dev.off()
 
 fname = paste0("all-", gsize, ".png", collapse="")
