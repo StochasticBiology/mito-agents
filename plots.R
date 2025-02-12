@@ -212,6 +212,7 @@ scale.atp = (depth*scale.sim.cell.um3**2) * (1e-6 / 1e-1)**3
 scale.mol = 1./(6e23 * scale.atp) 
 
 eq.df = df[df$terminated==1 & df$conc.ATP > 5e-4,]
+mito.speed.dist = list()
 for(expt in 1:8) {
   dyn.list[[expt]] = list()
   fname1 = paste0("out-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], "-", subdiv, ".txt", collapse="")
@@ -237,19 +238,34 @@ for(expt in 1:8) {
       labs(fill="[ATP]/mM") #+
       #ggtitle(paste0("    ", t.set[i], collapse=""))
     if(expt >= 5) {
-      # only use these lines until the source code output is fixed
-      mt.df$x = mt.df$x / subdiv
-      mt.df$y = mt.df$y / subdiv
       dyn.list[[expt]][[i]] = dyn.list[[expt]][[i]] +     
         geom_path(size=1,alpha=0.1,data=mt.df[mt.df$t < t.set[i],], 
                   aes(x=x, y=y, group=factor(mito)), color="white") + 
         geom_point(data=mt.df[mt.df$t == t.set[i],], aes(x=x, y=y), color="white") 
+      
+      df_with_speed <- mt.df %>%
+        arrange(mito, t) %>%  # Ensure data is sorted by mito and time
+        group_by(mito) %>%    # Group by individual mitochondrion
+        mutate(
+          dx = x - lag(x),    # Change in x
+          dy = y - lag(y),    # Change in y
+          dt = t - lag(t),    # Time difference
+          speed = sqrt(dx^2 + dy^2) / dt  # Calculate speed
+        ) %>%
+        ungroup()
+      mito.speed.dist[[expt]] = df_with_speed$speed
     } else {
       dyn.list[[expt]][[i]] = dyn.list[[expt]][[i]] +     
         geom_point(data=mt.df, aes(x=x, y=y), color="white")
     }
   }
 }
+
+g.speeds = ggarrange(ggplot(data.frame(x=mito.speed.dist[[5]]), aes(x=x)) + geom_histogram(),
+                     ggplot(data.frame(x=mito.speed.dist[[6]]), aes(x=x)) + geom_histogram(),
+                     ggplot(data.frame(x=mito.speed.dist[[7]]), aes(x=x)) + geom_histogram(),
+                     ggplot(data.frame(x=mito.speed.dist[[8]]), aes(x=x)) + geom_histogram(),
+                     labels=c("A", "B", "C", "D"))
 
 g.static = ggarrange(
   ggarrange(plotlist = dyn.list[[1]], nrow=1),
@@ -288,6 +304,11 @@ g.dynamic.labs = ggarrange(
 #dyn.list[[1]][[1]] + scale_fill_viridis_c(limits = range(data$value) + c(-0.05, 0.05))
 ######
 sf = 2
+
+fname = paste0("speeds-", gsize, "-", subdiv, ".png", collapse="")
+png(fname, width=600*sf, height=400*sf, res=72*sf)
+g.speeds
+dev.off()
 
 fname = paste0("cv-zoom-", gsize, "-", subdiv, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)

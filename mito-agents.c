@@ -215,8 +215,8 @@ int main(int argc, char *argv[])
 		    h = grid[i*GRIDY+j];
 
 		    if(expt == 4 || expt == 5) {
-		      dx = gsl_ran_gaussian(mparam*h/gridx);
-		      dy = gsl_ran_gaussian(mparam*h/gridx);
+		      dx = gsl_ran_gaussian(mparam*h/(gridx*gridx));
+		      dy = gsl_ran_gaussian(mparam*h/(gridx*gridx));
 		    }
 		    if(expt == 6 || expt == 7) {
 		      gradx = (r-l)/2.;
@@ -236,11 +236,11 @@ int main(int argc, char *argv[])
 		      }
 		    }
 		    // limit to 1 um/s
-		    speed = sqrt(dx*dx+dy*dy);
+		    /*		    speed = sqrt(dx*dx+dy*dy);
 	     	    if(speed > SUBDIV) {
 		      dx /= (speed/SUBDIV);
 		      dy /= (speed/SUBDIV);
-		    }
+		      }*/
 		    x[m] += dx*dt;
 		    y[m] += dy*dt;
 		    if(x[m] > 2*GRIDX || y[m] > 2*GRIDY || x[m] < -GRIDX || y[m] < -GRIDY) {
