@@ -2,7 +2,7 @@ library(ggplot2)
 library(ggpubr)
 library(viridis)
 
-gsize = 50
+gsize = 20
 depth = 10
 subdiv = 2 # number of simulation cells in 1um3
 
@@ -238,10 +238,16 @@ for(expt in 1:8) {
       labs(fill="[ATP]/mM") #+
       #ggtitle(paste0("    ", t.set[i], collapse=""))
     if(expt >= 5) {
+      if(expt == 5 | expt == 6) { 
+        plot.period = 10 
+      } else {
+        plot.period = Inf
+      }
       dyn.list[[expt]][[i]] = dyn.list[[expt]][[i]] +     
-        geom_path(size=1,alpha=0.1,data=mt.df[mt.df$t < t.set[i],], 
+        geom_path(size=0.2,alpha=0.5,data=mt.df[mt.df$t <= t.set[i] & mt.df$t > t.set[i]-plot.period,], 
                   aes(x=x, y=y, group=factor(mito)), color="white") + 
-        geom_point(data=mt.df[mt.df$t == t.set[i],], aes(x=x, y=y), color="white") 
+        geom_point(data=mt.df[mt.df$t == t.set[i],], aes(x=x, y=y), 
+                   shape = 21, fill = NA, color = "white", size = 0.8, stroke = 0.5)
       
       df_with_speed <- mt.df %>%
         arrange(mito, t) %>%  # Ensure data is sorted by mito and time
@@ -256,7 +262,8 @@ for(expt in 1:8) {
       mito.speed.dist[[expt]] = df_with_speed$speed
     } else {
       dyn.list[[expt]][[i]] = dyn.list[[expt]][[i]] +     
-        geom_point(data=mt.df, aes(x=x, y=y), color="white")
+        geom_point(data=mt.df, aes(x=x, y=y), 
+                   shape = 21, fill = NA, color = "white", size = 0.8, stroke = 0.5)
     }
   }
 }
