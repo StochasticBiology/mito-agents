@@ -4,9 +4,10 @@ library(viridis)
 
 gsize = 50
 depth = 10
+subdiv = 2 # number of simulation cells in 1um3
 
 df = data.frame()
-fnames = paste0("stats-", 0:7, "-", gsize, ".csv")
+fnames = paste0("stats-", 0:7, "-", gsize, "-", subdiv, ".csv")
 for(fname in fnames) {
   tmp.df = read.csv(fname)
   df = rbind(df, tmp.df)
@@ -14,6 +15,8 @@ for(fname in fnames) {
 
 expt.labels = c("Uni M, Uni C", "Uni M, Clu C", "Clu M, Uni C", "Clu M, Clu C",
                 "Mo1 M, Uni C", "Mo1 M, Clu C", "Mo2 M, Uni C", "Mo2 M, Clu C")
+expt.labels = c("Uniform mitos, Uniform κ", "Uniform mitos, Local κ", "Local mitos, Uniform κ", "Local mitos, Local κ",
+                "Diffusive mitos, Uniform κ", "Diffusive mitos, Local κ", "Directed mitos, Uniform κ", "Directed mitos, Local κ")
 df$expt.label = expt.labels[df$expt+1]
 
 ###### RQ1. When is a reasonable fold range in ATP supported at equilibrium?
@@ -115,6 +118,8 @@ p.3.zoom + scale_color_viridis()
 
 plot.order = c("Uni M, Uni C",  "Clu M, Uni C", "Mo1 M, Uni C","Mo2 M, Uni C",
                "Uni M, Clu C", "Clu M, Clu C",  "Mo1 M, Clu C",  "Mo2 M, Clu C")
+plot.order = c("Uniform mitos, Uniform κ",  "Local mitos, Uniform κ", "Diffusive mitos, Uniform κ", "Directed mitos, Uniform κ", 
+                "Uniform mitos, Local κ", "Local mitos, Local κ", "Diffusive mitos, Local κ", "Directed mitos, Local κ")
 
 p.2.zoom.a = ggplot() +
   geom_point(data = df[df$terminated==1 & 
@@ -184,45 +189,57 @@ df[df$terminated==1 & df$conc.ATP > 2e-3 & df$conc.ATP < 4e-3,]
 
 if(gsize == 50) {
 kappas = rep(0.01, 8)
-deltas = rep(c(0.32, 5.12), 4)
+deltas = rep(c(0.64, 0.64), 4)
+#was deltas = rep(c(0.32, 5.12), 4)
 }
 if(gsize == 20) {
   kappas = rep(0.01, 8)
-  deltas = rep(c(0.08, 0.32), 4)
+  deltas = rep(c(0.08, 0.08), 4)
+# was  deltas = rep(c(0.08, 0.32), 4)
 }
 
 expt = 5
-fname2 = paste0("out-mitos-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], ".txt", collapse="")
+fname2 = paste0("out-mitos-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], "-", subdiv, ".txt", collapse="")
 mt.df = read.csv(fname2, sep=" ", header=FALSE)
 colnames(mt.df) = c("t", "mito", "x", "y")
 mt.df[mt.df$mito==0,]
 dyn.list = list()
-scale.atp = (depth*1*1) * (1e-6 / 1e-1)**3
+
+# ATP is output as molecule number in each simulation cell
+# so to scale up to dm^-3 we need (um3 volume associated with a simulation cell) * (um3 in 1 dm3)
+scale.sim.cell.um3 = 1/subdiv
+scale.atp = (depth*scale.sim.cell.um3**2) * (1e-6 / 1e-1)**3
 scale.mol = 1./(6e23 * scale.atp) 
 
 eq.df = df[df$terminated==1 & df$conc.ATP > 5e-4,]
 for(expt in 1:8) {
   dyn.list[[expt]] = list()
-  fname1 = paste0("out-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], ".txt", collapse="")
+  fname1 = paste0("out-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], "-", subdiv, ".txt", collapse="")
   
   atp.df = read.table(fname1, sep=" ", header=FALSE)
   colnames(atp.df) = c("t", "x", "y", "ATP")
   if(expt >= 5) {
-    fname2 = paste0("out-mitos-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], ".txt", collapse="")
+    fname2 = paste0("out-mitos-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], "-", subdiv, ".txt", collapse="")
     mt.df = read.csv(fname2, sep=" ", header=FALSE)
     colnames(mt.df) = c("t", "mito", "x", "y")
   } else {
-    fname2 = paste0("mitos-", expt-1, "-", gsize, ".txt", collapse="")
+    fname2 = paste0("mitos-", expt-1, "-", gsize, "-", subdiv, ".txt", collapse="")
     mt.df = read.csv(fname2, sep=" ", header=FALSE)
     colnames(mt.df) = c("x", "y")
   }
   t.set = c(max(atp.df$t))
   for(i in 1:length(t.set)) {
+    this.df = atp.df[atp.df$t == t.set[i],]
+    this.df$col = this.df$ATP*scale.mol*1e3
     dyn.list[[expt]][[i]] = ggplot() +
-      geom_tile(data = atp.df[atp.df$t == t.set[i],], aes(x=x, y=y, fill=ATP*scale.mol*1e3)) +
+      geom_tile(data = this.df, aes(x=x, y=y, fill=col)) +
+      scale_fill_viridis_c(option = "magma", limits = range(this.df$col) + c(-0.01, 0.01)) +
       labs(fill="[ATP]/mM") #+
       #ggtitle(paste0("    ", t.set[i], collapse=""))
     if(expt >= 5) {
+      # only use these lines until the source code output is fixed
+      mt.df$x = mt.df$x / subdiv
+      mt.df$y = mt.df$y / subdiv
       dyn.list[[expt]][[i]] = dyn.list[[expt]][[i]] +     
         geom_path(size=1,alpha=0.1,data=mt.df[mt.df$t < t.set[i],], 
                   aes(x=x, y=y, group=factor(mito)), color="white") + 
@@ -268,31 +285,31 @@ g.dynamic.labs = ggarrange(
   labels=c("A", "B", "C", "D")
 )
   
-
+#dyn.list[[1]][[1]] + scale_fill_viridis_c(limits = range(data$value) + c(-0.05, 0.05))
 ######
 sf = 2
 
-fname = paste0("cv-zoom-", gsize, ".png", collapse="")
+fname = paste0("cv-zoom-", gsize, "-", subdiv, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
 p.3.zoom.a 
 dev.off()
 
-fname = paste0("fr-zoom-", gsize, ".png", collapse="")
+fname = paste0("fr-zoom-", gsize, "-", subdiv, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
 p.2.zoom.a + scale_color_viridis()
 dev.off()
 
-fname = paste0("snaps-static-", gsize, ".png", collapse="")
+fname = paste0("snaps-static-", gsize, "-", subdiv, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
 g.static.labs
 dev.off()
 
-fname = paste0("snaps-dynamic-", gsize, ".png", collapse="")
+fname = paste0("snaps-dynamic-", gsize, "-", subdiv, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
 g.dynamic.labs
 dev.off()
 
-fname = paste0("all-", gsize, ".png", collapse="")
+fname = paste0("all-", gsize, "-", subdiv, ".png", collapse="")
 png(fname, width=900*sf, height=600*sf, res=72*sf)
 ggarrange(
   p.3.zoom.a + scale_color_viridis(),
