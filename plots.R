@@ -46,14 +46,14 @@ max(df$fold.range[df$terminated == 1 & df$expt == 1])
 
 # bio-reasonable values for consumption are around 10^9 ATP/cell/s; total ATP around 6e10 ATP/cell
 df.legit = df[df$terminated==1 & 
-     df$consumption > 5e8 & df$consumption < 5e9 & 
+     df$consumption > 1e8 & df$consumption < 1e10 & 
      df$conc.ATP > 5e-4,]
 df.legit
 # so low(er) ATP concentration is usually necessary for high fold range
 # this typically gives higher consumption values, but not outrageously so
 
 df[df$terminated==1 & 
-     df$conc.ATP > 1e-3,]
+     df$conc.ATP > 5e-4,]
 
 order.df = df.legit[order(-df.legit$fold.range), ]
 order.df = order.df[order.df$equilibrated == 1,]
@@ -109,7 +109,7 @@ p.3 + scale_color_viridis()
 p.3.zoom = ggplot() +
    geom_point(data = df[df$terminated==1 & 
                          df$conc.ATP > 5e-4 & df$conc.ATP < 1e-2 &
-                         df$consumption > 1e9,], 
+                         df$consumption > 1e8,], 
              aes(x=consumption, y=conc.ATP, size=fold.range, color=fold.range)) +
   scale_x_continuous(transform = "log10") + 
   scale_y_continuous(transform = "log10") + facet_wrap(~expt.label, scales = "free")
@@ -124,7 +124,7 @@ plot.order = c("Uniform mitos, Uniform κ",  "Local mitos, Uniform κ", "Diffusi
 p.2.zoom.a = ggplot() +
   geom_point(data = df[df$terminated==1 & 
                          df$conc.ATP > 5e-4 & df$conc.ATP < 1e-2 &
-                         df$consumption > 1e9,], 
+                         df$consumption > 1e8,], 
              aes(x=conc.ATP*1e3, y=consumption, size=fold.range, fill=fold.range), pch=21) +
   scale_x_continuous(transform = "log10") + 
   scale_y_continuous(transform = "log10") + 
@@ -136,7 +136,7 @@ p.2.zoom.a = ggplot() +
 p.3.zoom.a = ggplot() +
   geom_point(data = df[df$terminated==1 & 
                          df$conc.ATP > 5e-4 & df$conc.ATP < 1e-2 &
-                         df$consumption > 1e9,], 
+                         df$consumption > 1e8,], 
              aes(x=conc.ATP*1e3, y=consumption, size=CV, fill=CV), pch=21) +
   scale_x_continuous(transform = "log10") + 
   scale_y_continuous(transform = "log10") + 
@@ -151,7 +151,7 @@ ggplot(df.legit, aes(x=log10(CV), fill=factor(expt.label))) + geom_histogram(pos
 ggplot(df.legit, aes(x=log10(CV), fill=factor(expt.label))) + geom_density(alpha=0.3) + facet_wrap(~expt.label)
 
 p.3.cv = ggplot() +
-  geom_rect(data = data.frame(xmin=5e8, xmax=5e9, ymin=5e-4, ymax=1e-2), 
+  geom_rect(data = data.frame(xmin=1e8, xmax=1e10, ymin=5e-4, ymax=1e-2), 
             aes(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax),
             fill = "lightblue") +
   geom_point(data = df[df$terminated==1 & df$expt<4,], 
@@ -166,7 +166,7 @@ p.3.cv + scale_color_gradientn(
 ) 
 
 p.3.a = ggplot() +
-  geom_rect(data = data.frame(xmin=5e8, xmax=5e9, ymin=5e9, ymax=5e11), 
+  geom_rect(data = data.frame(xmin=1e8, xmax=1e10, ymin=5e9, ymax=5e11), 
             aes(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax),
             fill = "lightblue") +
   geom_point(data = df[df$terminated==1 & df$expt>=4,], 
@@ -189,12 +189,17 @@ df[df$terminated==1 & df$conc.ATP > 2e-3 & df$conc.ATP < 4e-3,]
 
 if(gsize == 50) {
 kappas = rep(0.01, 8)
-deltas = rep(c(0.64, 0.64), 4)
+deltas = rep(0.64, 8)
+kappas = rep(0.64, 8)
+deltas = rep(5.12, 8)
+
 #was deltas = rep(c(0.32, 5.12), 4)
 }
 if(gsize == 20) {
   kappas = rep(0.01, 8)
-  deltas = rep(c(0.08, 0.08), 4)
+  deltas = rep(0.08, 8)
+  kappas = rep(2.56, 8)
+  deltas = rep(2.56, 8)
 # was  deltas = rep(c(0.08, 0.32), 4)
 }
 
