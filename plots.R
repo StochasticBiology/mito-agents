@@ -2,11 +2,12 @@ library(ggplot2)
 library(ggpubr)
 library(viridis)
 
-gsize = 50
+gsize = 20
 depth = 10
+subdiv = 2 # number of simulation cells in 1um3
 
 df = data.frame()
-fnames = paste0("stats-", 0:7, "-", gsize, ".csv")
+fnames = paste0("stats-", 0:7, "-", gsize, "-", subdiv, ".csv")
 for(fname in fnames) {
   tmp.df = read.csv(fname)
   df = rbind(df, tmp.df)
@@ -14,6 +15,8 @@ for(fname in fnames) {
 
 expt.labels = c("Uni M, Uni C", "Uni M, Clu C", "Clu M, Uni C", "Clu M, Clu C",
                 "Mo1 M, Uni C", "Mo1 M, Clu C", "Mo2 M, Uni C", "Mo2 M, Clu C")
+expt.labels = c("Uniform mitos, Uniform κ", "Uniform mitos, Local κ", "Local mitos, Uniform κ", "Local mitos, Local κ",
+                "Diffusive mitos, Uniform κ", "Diffusive mitos, Local κ", "Directed mitos, Uniform κ", "Directed mitos, Local κ")
 df$expt.label = expt.labels[df$expt+1]
 
 ###### RQ1. When is a reasonable fold range in ATP supported at equilibrium?
@@ -43,14 +46,14 @@ max(df$fold.range[df$terminated == 1 & df$expt == 1])
 
 # bio-reasonable values for consumption are around 10^9 ATP/cell/s; total ATP around 6e10 ATP/cell
 df.legit = df[df$terminated==1 & 
-     df$consumption > 5e8 & df$consumption < 5e9 & 
+     df$consumption > 1e8 & df$consumption < 1e10 & 
      df$conc.ATP > 5e-4,]
 df.legit
 # so low(er) ATP concentration is usually necessary for high fold range
 # this typically gives higher consumption values, but not outrageously so
 
 df[df$terminated==1 & 
-     df$conc.ATP > 1e-3,]
+     df$conc.ATP > 5e-4,]
 
 order.df = df.legit[order(-df.legit$fold.range), ]
 order.df = order.df[order.df$equilibrated == 1,]
@@ -106,7 +109,7 @@ p.3 + scale_color_viridis()
 p.3.zoom = ggplot() +
    geom_point(data = df[df$terminated==1 & 
                          df$conc.ATP > 5e-4 & df$conc.ATP < 1e-2 &
-                         df$consumption > 1e9,], 
+                         df$consumption > 1e8,], 
              aes(x=consumption, y=conc.ATP, size=fold.range, color=fold.range)) +
   scale_x_continuous(transform = "log10") + 
   scale_y_continuous(transform = "log10") + facet_wrap(~expt.label, scales = "free")
@@ -115,11 +118,13 @@ p.3.zoom + scale_color_viridis()
 
 plot.order = c("Uni M, Uni C",  "Clu M, Uni C", "Mo1 M, Uni C","Mo2 M, Uni C",
                "Uni M, Clu C", "Clu M, Clu C",  "Mo1 M, Clu C",  "Mo2 M, Clu C")
+plot.order = c("Uniform mitos, Uniform κ",  "Local mitos, Uniform κ", "Diffusive mitos, Uniform κ", "Directed mitos, Uniform κ", 
+                "Uniform mitos, Local κ", "Local mitos, Local κ", "Diffusive mitos, Local κ", "Directed mitos, Local κ")
 
 p.2.zoom.a = ggplot() +
   geom_point(data = df[df$terminated==1 & 
                          df$conc.ATP > 5e-4 & df$conc.ATP < 1e-2 &
-                         df$consumption > 1e9,], 
+                         df$consumption > 1e8,], 
              aes(x=conc.ATP*1e3, y=consumption, size=fold.range, fill=fold.range), pch=21) +
   scale_x_continuous(transform = "log10") + 
   scale_y_continuous(transform = "log10") + 
@@ -131,7 +136,7 @@ p.2.zoom.a = ggplot() +
 p.3.zoom.a = ggplot() +
   geom_point(data = df[df$terminated==1 & 
                          df$conc.ATP > 5e-4 & df$conc.ATP < 1e-2 &
-                         df$consumption > 1e9,], 
+                         df$consumption > 1e8,], 
              aes(x=conc.ATP*1e3, y=consumption, size=CV, fill=CV), pch=21) +
   scale_x_continuous(transform = "log10") + 
   scale_y_continuous(transform = "log10") + 
@@ -146,7 +151,7 @@ ggplot(df.legit, aes(x=log10(CV), fill=factor(expt.label))) + geom_histogram(pos
 ggplot(df.legit, aes(x=log10(CV), fill=factor(expt.label))) + geom_density(alpha=0.3) + facet_wrap(~expt.label)
 
 p.3.cv = ggplot() +
-  geom_rect(data = data.frame(xmin=5e8, xmax=5e9, ymin=5e-4, ymax=1e-2), 
+  geom_rect(data = data.frame(xmin=1e8, xmax=1e10, ymin=5e-4, ymax=1e-2), 
             aes(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax),
             fill = "lightblue") +
   geom_point(data = df[df$terminated==1 & df$expt<4,], 
@@ -161,7 +166,7 @@ p.3.cv + scale_color_gradientn(
 ) 
 
 p.3.a = ggplot() +
-  geom_rect(data = data.frame(xmin=5e8, xmax=5e9, ymin=5e9, ymax=5e11), 
+  geom_rect(data = data.frame(xmin=1e8, xmax=1e10, ymin=5e9, ymax=5e11), 
             aes(xmin=xmin,xmax=xmax,ymin=ymin,ymax=ymax),
             fill = "lightblue") +
   geom_point(data = df[df$terminated==1 & df$expt>=4,], 
@@ -184,55 +189,95 @@ df[df$terminated==1 & df$conc.ATP > 2e-3 & df$conc.ATP < 4e-3,]
 
 if(gsize == 50) {
 kappas = rep(0.01, 8)
-deltas = rep(c(0.32, 5.12), 4)
+deltas = rep(0.64, 8)
+kappas = rep(0.64, 8)
+deltas = rep(5.12, 8)
+
+#was deltas = rep(c(0.32, 5.12), 4)
 }
 if(gsize == 20) {
   kappas = rep(0.01, 8)
-  deltas = rep(c(0.08, 0.32), 4)
+  deltas = rep(0.08, 8)
+  kappas = rep(2.56, 8)
+  deltas = rep(2.56, 8)
+# was  deltas = rep(c(0.08, 0.32), 4)
 }
 
 expt = 5
-fname2 = paste0("out-mitos-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], ".txt", collapse="")
+fname2 = paste0("out-mitos-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], "-", subdiv, ".txt", collapse="")
 mt.df = read.csv(fname2, sep=" ", header=FALSE)
 colnames(mt.df) = c("t", "mito", "x", "y")
 mt.df[mt.df$mito==0,]
 dyn.list = list()
-scale.atp = (depth*1*1) * (1e-6 / 1e-1)**3
+
+# ATP is output as molecule number in each simulation cell
+# so to scale up to dm^-3 we need (um3 volume associated with a simulation cell) * (um3 in 1 dm3)
+scale.sim.cell.um3 = 1/subdiv
+scale.atp = (depth*scale.sim.cell.um3**2) * (1e-6 / 1e-1)**3
 scale.mol = 1./(6e23 * scale.atp) 
 
 eq.df = df[df$terminated==1 & df$conc.ATP > 5e-4,]
+mito.speed.dist = list()
 for(expt in 1:8) {
   dyn.list[[expt]] = list()
-  fname1 = paste0("out-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], ".txt", collapse="")
+  fname1 = paste0("out-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], "-", subdiv, ".txt", collapse="")
   
   atp.df = read.table(fname1, sep=" ", header=FALSE)
   colnames(atp.df) = c("t", "x", "y", "ATP")
   if(expt >= 5) {
-    fname2 = paste0("out-mitos-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], ".txt", collapse="")
+    fname2 = paste0("out-mitos-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], "-", subdiv, ".txt", collapse="")
     mt.df = read.csv(fname2, sep=" ", header=FALSE)
     colnames(mt.df) = c("t", "mito", "x", "y")
   } else {
-    fname2 = paste0("mitos-", expt-1, "-", gsize, ".txt", collapse="")
+    fname2 = paste0("mitos-", expt-1, "-", gsize, "-", subdiv, ".txt", collapse="")
     mt.df = read.csv(fname2, sep=" ", header=FALSE)
     colnames(mt.df) = c("x", "y")
   }
   t.set = c(max(atp.df$t))
   for(i in 1:length(t.set)) {
+    this.df = atp.df[atp.df$t == t.set[i],]
+    this.df$col = this.df$ATP*scale.mol*1e3
     dyn.list[[expt]][[i]] = ggplot() +
-      geom_tile(data = atp.df[atp.df$t == t.set[i],], aes(x=x, y=y, fill=ATP*scale.mol*1e3)) +
+      geom_tile(data = this.df, aes(x=x, y=y, fill=col)) +
+      scale_fill_viridis_c(option = "magma", limits = range(this.df$col) + c(-0.01, 0.01)) +
       labs(fill="[ATP]/mM") #+
       #ggtitle(paste0("    ", t.set[i], collapse=""))
     if(expt >= 5) {
+      if(expt == 5 | expt == 6) { 
+        plot.period = 10 
+      } else {
+        plot.period = Inf
+      }
       dyn.list[[expt]][[i]] = dyn.list[[expt]][[i]] +     
-        geom_path(size=1,alpha=0.1,data=mt.df[mt.df$t < t.set[i],], 
+        geom_path(size=0.2,alpha=0.5,data=mt.df[mt.df$t <= t.set[i] & mt.df$t > t.set[i]-plot.period,], 
                   aes(x=x, y=y, group=factor(mito)), color="white") + 
-        geom_point(data=mt.df[mt.df$t == t.set[i],], aes(x=x, y=y), color="white") 
+        geom_point(data=mt.df[mt.df$t == t.set[i],], aes(x=x, y=y), 
+                   shape = 21, fill = NA, color = "white", size = 0.8, stroke = 0.5)
+      
+      df_with_speed <- mt.df %>%
+        arrange(mito, t) %>%  # Ensure data is sorted by mito and time
+        group_by(mito) %>%    # Group by individual mitochondrion
+        mutate(
+          dx = x - lag(x),    # Change in x
+          dy = y - lag(y),    # Change in y
+          dt = t - lag(t),    # Time difference
+          speed = sqrt(dx^2 + dy^2) / dt  # Calculate speed
+        ) %>%
+        ungroup()
+      mito.speed.dist[[expt]] = df_with_speed$speed
     } else {
       dyn.list[[expt]][[i]] = dyn.list[[expt]][[i]] +     
-        geom_point(data=mt.df, aes(x=x, y=y), color="white")
+        geom_point(data=mt.df, aes(x=x, y=y), 
+                   shape = 21, fill = NA, color = "white", size = 0.8, stroke = 0.5)
     }
   }
 }
+
+g.speeds = ggarrange(ggplot(data.frame(x=mito.speed.dist[[5]]), aes(x=x)) + geom_histogram(),
+                     ggplot(data.frame(x=mito.speed.dist[[6]]), aes(x=x)) + geom_histogram(),
+                     ggplot(data.frame(x=mito.speed.dist[[7]]), aes(x=x)) + geom_histogram(),
+                     ggplot(data.frame(x=mito.speed.dist[[8]]), aes(x=x)) + geom_histogram(),
+                     labels=c("A", "B", "C", "D"))
 
 g.static = ggarrange(
   ggarrange(plotlist = dyn.list[[1]], nrow=1),
@@ -268,31 +313,36 @@ g.dynamic.labs = ggarrange(
   labels=c("A", "B", "C", "D")
 )
   
-
+#dyn.list[[1]][[1]] + scale_fill_viridis_c(limits = range(data$value) + c(-0.05, 0.05))
 ######
 sf = 2
 
-fname = paste0("cv-zoom-", gsize, ".png", collapse="")
+fname = paste0("speeds-", gsize, "-", subdiv, ".png", collapse="")
+png(fname, width=600*sf, height=400*sf, res=72*sf)
+g.speeds
+dev.off()
+
+fname = paste0("cv-zoom-", gsize, "-", subdiv, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
 p.3.zoom.a 
 dev.off()
 
-fname = paste0("fr-zoom-", gsize, ".png", collapse="")
+fname = paste0("fr-zoom-", gsize, "-", subdiv, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
 p.2.zoom.a + scale_color_viridis()
 dev.off()
 
-fname = paste0("snaps-static-", gsize, ".png", collapse="")
+fname = paste0("snaps-static-", gsize, "-", subdiv, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
 g.static.labs
 dev.off()
 
-fname = paste0("snaps-dynamic-", gsize, ".png", collapse="")
+fname = paste0("snaps-dynamic-", gsize, "-", subdiv, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
 g.dynamic.labs
 dev.off()
 
-fname = paste0("all-", gsize, ".png", collapse="")
+fname = paste0("all-", gsize, "-", subdiv, ".png", collapse="")
 png(fname, width=900*sf, height=600*sf, res=72*sf)
 ggarrange(
   p.3.zoom.a + scale_color_viridis(),
