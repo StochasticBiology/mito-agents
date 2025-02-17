@@ -20,8 +20,8 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define NMITO 100
-#define DEPTH 10
+int NMITO = 100;
+int DEPTH = 10;
 int SUBDIV;   // number of simulation cells in 1um3, controls grid granularity
 
 #define RND drand48()
@@ -86,20 +86,22 @@ int main(int argc, char *argv[])
   //                        (2) clustered mitos, uniform consumption; (3) clustered mitos, clustered consumption
   //                        (4) mobile-1 mitos, uniform consumption; (5) mobile-1 mitos, clustered consumption;
   //                        (6) mobile-2 mitos, uniform consumption; (7) mobile-2 mitos, clustered consumption
-  if(argc < 4) {
-    printf("Please specify a cell size, elements per um, and an experiment! Experiments 0-7\n");
+  if(argc < 6) {
+    printf("Please specify a cell size, cell depth, number of mitos, elements per um, and an experiment! Experiments 0-7\n");
     return 0;
   }
-  SUBDIV = atoi(argv[2]);
-  expt = atoi(argv[3]);
+  SUBDIV = atoi(argv[4]);
+  expt = atoi(argv[5]);
   if(expt == 4 || expt == 5 || expt == 6 || expt == 7) {
-    if(argc < 5) {
+    if(argc < 7) {
       printf("This experiment needs a motion parameter!\n");
       return 0;
     }
-    mparam = atof(argv[4]);
+    mparam = atof(argv[6]);
   }
   cellsize = atoi(argv[1]);
+  DEPTH = atoi(argv[2]);
+  NMITO = atoi(argv[3]);
 
   if(SUBDIV <= 1) dt = 0.001;
   else if(SUBDIV <= 2) dt = 0.00025;
@@ -116,7 +118,7 @@ int main(int argc, char *argv[])
   newgrid = (double*)malloc(sizeof(double)*GRIDX*GRIDY);
 
   // open file for output. we'll store statistics of each situation by timestep; we'll also (later) store snapshots of individual cases
-  sprintf(masterfstr, "stats-%i-%i-%i.csv", expt, cellsize, SUBDIV);
+  sprintf(masterfstr, "stats-%i-%i-%i-%i-%i.csv", expt, cellsize, DEPTH, NMITO, SUBDIV);
   fp = fopen(masterfstr, "w");
   fprintf(fp, "expt,mparam,kappa,delta,t,total.ATP,ex.molar,min.ATP,max.ATP,change.ATP,mean.ATP,var.ATP,vol.dm3,consumption,terminated\n");
   fclose(fp);
@@ -159,11 +161,11 @@ int main(int argc, char *argv[])
 	  // initialise output files
 	  if(expt == 4 || expt == 5 || expt == 6 || expt == 7)
 	    {
-	      sprintf(mitosnapfstr, "out-mitos-%i-%i-%.2f-%.2f-%i.txt", expt, cellsize, kappa, delta, SUBDIV);
+	      sprintf(mitosnapfstr, "out-mitos-%i-%i-%i-%i-%.2f-%.2f-%i.txt", expt, cellsize, DEPTH, NMITO, kappa, delta, SUBDIV);
 	      fp = fopen(mitosnapfstr, "w");
 	      fclose(fp);
 	    }
-	  sprintf(snapfstr, "out-%i-%i-%.2f-%.2f-%i.txt", expt, cellsize, kappa, delta, SUBDIV);
+	  sprintf(snapfstr, "out-%i-%i-%i-%i-%.2f-%.2f-%i.txt", expt, cellsize, DEPTH, NMITO, kappa, delta, SUBDIV);
 	  fp = fopen(snapfstr, "w");
 	  fclose(fp);
 			  
@@ -295,7 +297,6 @@ int main(int argc, char *argv[])
 
 		  if(expt == 4 || expt == 5 || expt == 6 || expt == 7)
 		    {
-		      //sprintf(fstr, "out-mitos-%i-%.2f-%.2f.txt", expt, kappa, delta);
 		      fp = fopen(mitosnapfstr, "a");
 		      for(m = 0; m < NMITO; m++)
 			fprintf(fp, "%i %i %f %f\n", (int) t, m, x[m]*gridx, y[m]*gridx);
@@ -305,7 +306,6 @@ int main(int argc, char *argv[])
 		  // take full snapshots of early behaviour and subsequent changes
 		  if((int)t < 5 || (int)t % 100 == 0)
 		    {
-		      //		      sprintf(fstr, "out-%i-%i-%.2f-%.2f.txt", expt, cellsize, kappa, delta);
 		      fp = fopen(snapfstr, "a");
 		      for(i = 0; i < GRIDX; i++)
 			{
@@ -330,7 +330,6 @@ int main(int argc, char *argv[])
 	  fclose(fp);
 
 	  // output equilibrated state
-	  //sprintf(fstr, "out-%i-%i-%.2f-%.2f.txt", expt, cellsize, kappa, delta);
 	  fp = fopen(snapfstr, "a");
 	  for(i = 0; i < GRIDX; i++)
 	    {
@@ -344,7 +343,7 @@ int main(int argc, char *argv[])
 	  fclose(fp);
 
 	  // final output details of mitos
-	  sprintf(fstr, "mitos-%i-%i-%i.txt", expt, cellsize, SUBDIV);
+	  sprintf(fstr, "mitos-%i-%i-%i-%i-%i.txt", expt, cellsize, DEPTH, NMITO, SUBDIV);
 	  fp = fopen(fstr, "w");
 	  for(m = 0; m < NMITO; m++)
 	    fprintf(fp, "%.3f %.3f\n", x[m]*gridx, y[m]*gridx);
