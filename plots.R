@@ -11,6 +11,10 @@ expts.set = list( c(50, 10, 100, 2),
                   c(50, 10,  50, 2),
                   c(20, 10, 100, 1))
 
+expts.set = list( 
+                  c(50, 10,  50, 2),
+                  c(20, 10, 100, 1))
+
 for(this.expts in expts.set) {
 gsize = this.expts[1]
 depth = this.expts[2]
@@ -34,6 +38,9 @@ df$expt.label = expt.labels[df$expt+1]
 # we are interested in whether bio-reasonable parameters can support high fold-changes in ATP conc
 
 # compute fold change across cell, and report for those instances that equilibrated
+# total.ATP is the total number of ATP molecules in the whole simulated cell
+# vol.dm3 gives the cellular volume in dm3
+# hence conc.ATP here will give the cellular ATP concentration in mol dm-3
 df$fold.range = df$max.ATP/df$min.ATP
 df$conc.ATP = df$total.ATP/df$vol.dm3 / 6e23
 df$equilibrated = ifelse(df$terminated == 1 & df$t < 1000, 1, 0)
