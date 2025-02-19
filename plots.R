@@ -1,13 +1,28 @@
 library(ggplot2)
 library(ggpubr)
 library(viridis)
+library(dplyr)
 
-gsize = 20
-depth = 10
-subdiv = 2 # number of simulation cells in 1um3
+expts.set = list( c(50, 10, 100, 2),
+                  c(20, 10, 100, 2),
+                  c(50,  2, 100, 2),
+                  c(50, 20, 100, 2),
+                  c(50, 10, 200, 2),
+                  c(50, 10,  50, 2),
+                  c(20, 10, 100, 1))
+
+expts.set = list( 
+                  c(50, 10,  50, 2),
+                  c(20, 10, 100, 1))
+
+for(this.expts in expts.set) {
+gsize = this.expts[1]
+depth = this.expts[2]
+nmito = this.expts[3]
+subdiv = this.expts[4] # number of simulation cells in 1um3
 
 df = data.frame()
-fnames = paste0("stats-", 0:7, "-", gsize, "-", subdiv, ".csv")
+fnames = paste0("stats-", 0:7, "-", gsize, "-", depth, "-", nmito, "-", subdiv, ".csv")
 for(fname in fnames) {
   tmp.df = read.csv(fname)
   df = rbind(df, tmp.df)
@@ -23,6 +38,9 @@ df$expt.label = expt.labels[df$expt+1]
 # we are interested in whether bio-reasonable parameters can support high fold-changes in ATP conc
 
 # compute fold change across cell, and report for those instances that equilibrated
+# total.ATP is the total number of ATP molecules in the whole simulated cell
+# vol.dm3 gives the cellular volume in dm3
+# hence conc.ATP here will give the cellular ATP concentration in mol dm-3
 df$fold.range = df$max.ATP/df$min.ATP
 df$conc.ATP = df$total.ATP/df$vol.dm3 / 6e23
 df$equilibrated = ifelse(df$terminated == 1 & df$t < 1000, 1, 0)
@@ -204,7 +222,7 @@ if(gsize == 20) {
 }
 
 expt = 5
-fname2 = paste0("out-mitos-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], "-", subdiv, ".txt", collapse="")
+fname2 = paste0("out-mitos-", expt-1, "-", gsize, "-", depth, "-", nmito, "-", kappas[expt], "-", deltas[expt], "-", subdiv, ".txt", collapse="")
 mt.df = read.csv(fname2, sep=" ", header=FALSE)
 colnames(mt.df) = c("t", "mito", "x", "y")
 mt.df[mt.df$mito==0,]
@@ -220,16 +238,16 @@ eq.df = df[df$terminated==1 & df$conc.ATP > 5e-4,]
 mito.speed.dist = list()
 for(expt in 1:8) {
   dyn.list[[expt]] = list()
-  fname1 = paste0("out-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], "-", subdiv, ".txt", collapse="")
+  fname1 = paste0("out-", expt-1, "-", gsize, "-", depth, "-", nmito, "-", kappas[expt], "-", deltas[expt], "-", subdiv, ".txt", collapse="")
   
   atp.df = read.table(fname1, sep=" ", header=FALSE)
   colnames(atp.df) = c("t", "x", "y", "ATP")
   if(expt >= 5) {
-    fname2 = paste0("out-mitos-", expt-1, "-", gsize, "-", kappas[expt], "-", deltas[expt], "-", subdiv, ".txt", collapse="")
+    fname2 = paste0("out-mitos-", expt-1, "-", gsize, "-", depth, "-", nmito, "-", kappas[expt], "-", deltas[expt], "-", subdiv, ".txt", collapse="")
     mt.df = read.csv(fname2, sep=" ", header=FALSE)
     colnames(mt.df) = c("t", "mito", "x", "y")
   } else {
-    fname2 = paste0("mitos-", expt-1, "-", gsize, "-", subdiv, ".txt", collapse="")
+    fname2 = paste0("mitos-", expt-1, "-", gsize, "-", depth, "-", nmito, "-", subdiv, ".txt", collapse="")
     mt.df = read.csv(fname2, sep=" ", header=FALSE)
     colnames(mt.df) = c("x", "y")
   }
@@ -317,40 +335,38 @@ g.dynamic.labs = ggarrange(
 ######
 sf = 2
 
-fname = paste0("speeds-", gsize, "-", subdiv, ".png", collapse="")
+fname = paste0("speeds-", gsize, "-", depth, "-", nmito, "-", subdiv, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
-g.speeds
+print(g.speeds)
 dev.off()
 
-fname = paste0("cv-zoom-", gsize, "-", subdiv, ".png", collapse="")
+fname = paste0("cv-zoom-", gsize, "-", depth, "-", nmito, "-", subdiv, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
-p.3.zoom.a 
+print(p.3.zoom.a)
 dev.off()
 
-fname = paste0("fr-zoom-", gsize, "-", subdiv, ".png", collapse="")
+fname = paste0("fr-zoom-", gsize, "-", depth, "-", nmito, "-", subdiv, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
-p.2.zoom.a + scale_color_viridis()
+print(p.2.zoom.a + scale_color_viridis())
 dev.off()
 
-fname = paste0("snaps-static-", gsize, "-", subdiv, ".png", collapse="")
+fname = paste0("snaps-static-", gsize, "-", depth, "-", nmito, "-", subdiv, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
-g.static.labs
+print(g.static.labs)
 dev.off()
 
-fname = paste0("snaps-dynamic-", gsize, "-", subdiv, ".png", collapse="")
+fname = paste0("snaps-dynamic-", gsize, "-", depth, "-", nmito, "-", subdiv, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
-g.dynamic.labs
+print(g.dynamic.labs)
 dev.off()
 
-fname = paste0("all-", gsize, "-", subdiv, ".png", collapse="")
+fname = paste0("all-", gsize, "-", depth, "-", nmito, "-", subdiv, ".png", collapse="")
 png(fname, width=900*sf, height=600*sf, res=72*sf)
-ggarrange(
+print(ggarrange(
   p.3.zoom.a + scale_color_viridis(),
   ggarrange(g.static, g.dynamic, nrow=1, labels=c("B", "C")),
   nrow=2, 
   labels = c("A", "")
-)
+))
 dev.off()
-
-  
-ggplot(df[df$terminated==1,], aes(x=fold.range, y=CV)) + geom_point()
+}
