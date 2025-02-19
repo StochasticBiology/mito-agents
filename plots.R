@@ -11,10 +11,6 @@ expts.set = list( c(50, 10, 100, 2),
                   c(50, 10,  50, 2),
                   c(20, 10, 100, 1))
 
-expts.set = list( 
-                  c(50, 10,  50, 2),
-                  c(20, 10, 100, 1))
-
 for(this.expts in expts.set) {
 gsize = this.expts[1]
 depth = this.expts[2]
