@@ -24,6 +24,8 @@ for(fname in fnames) {
   df = rbind(df, tmp.df)
 }
 
+print(paste0("----- Thinking about ", paste0(this.expts, collapse=" ")))
+
 expt.labels = c("Uni M, Uni C", "Uni M, Clu C", "Clu M, Uni C", "Clu M, Clu C",
                 "Mo1 M, Uni C", "Mo1 M, Clu C", "Mo2 M, Uni C", "Mo2 M, Clu C")
 expt.labels = c("Uniform mitos, Uniform κ", "Uniform mitos, Local κ", "Local mitos, Uniform κ", "Local mitos, Local κ",
@@ -212,7 +214,7 @@ deltas = rep(5.12, 8)
 if(gsize == 20) {
   kappas = rep(0.01, 8)
   deltas = rep(0.08, 8)
-  kappas = rep(2.56, 8)
+  kappas = rep(0.64, 8)
   deltas = rep(2.56, 8)
 # was  deltas = rep(c(0.08, 0.32), 4)
 }
@@ -233,6 +235,10 @@ scale.mol = 1./(6e23 * scale.atp)
 eq.df = df[df$terminated==1 & df$conc.ATP > 5e-4,]
 mito.speed.dist = list()
 for(expt in 1:8) {
+  tmp.sub = df[df$expt == expt-1 & df$kappa == kappas[expt] & df$delta == deltas[expt],]
+  final.sub = tmp.sub[tmp.sub$t == max(tmp.sub$t),]
+  print(paste0("Expt ", expt, " consumption ", final.sub$consumption[1]))
+  
   dyn.list[[expt]] = list()
   fname1 = paste0("out-", expt-1, "-", gsize, "-", depth, "-", nmito, "-", kappas[expt], "-", deltas[expt], "-", subdiv, ".txt", collapse="")
   
@@ -338,7 +344,7 @@ dev.off()
 
 fname = paste0("cv-zoom-", gsize, "-", depth, "-", nmito, "-", subdiv, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
-print(p.3.zoom.a + theme(text = element_text(family = "Arial")))
+print(p.3.zoom.a)
 dev.off()
 
 fname = paste0("fr-zoom-", gsize, "-", depth, "-", nmito, "-", subdiv, ".png", collapse="")
