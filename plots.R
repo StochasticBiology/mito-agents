@@ -143,7 +143,7 @@ p.2.zoom.a = ggplot() +
   scale_x_continuous(transform = "log10") + 
   scale_y_continuous(transform = "log10") + 
   scale_fill_viridis(option="inferno") +
-  labs(y="ATP consumption / cell⁻¹ s⁻¹", x="[ATP] / mM", fill="Fold range", size="Fold range") +
+  labs(y="ATP consumption / "~cell^{-1}~s^{-1}, x="[ATP] / mM", fill="Fold range", size="Fold range") +
   facet_wrap(~factor(expt.label, levels=plot.order), nrow=2, ncol=4) +
   theme_light()
 
@@ -155,7 +155,7 @@ p.3.zoom.a = ggplot() +
   scale_x_continuous(transform = "log10") + 
   scale_y_continuous(transform = "log10") + 
   scale_fill_viridis(option="inferno") +
-  labs(y="ATP consumption / cell⁻¹ s⁻¹", x="[ATP] / mM") +
+  labs(y="ATP consumption / "~cell^{-1}~s^{-1}, x="[ATP] / mM") +
   facet_wrap(~factor(expt.label, levels=plot.order), nrow=2, ncol=4) +
   theme_light()
 
@@ -338,7 +338,7 @@ dev.off()
 
 fname = paste0("cv-zoom-", gsize, "-", depth, "-", nmito, "-", subdiv, ".png", collapse="")
 png(fname, width=600*sf, height=400*sf, res=72*sf)
-print(p.3.zoom.a)
+print(p.3.zoom.a + theme(text = element_text(family = "Arial")))
 dev.off()
 
 fname = paste0("fr-zoom-", gsize, "-", depth, "-", nmito, "-", subdiv, ".png", collapse="")
