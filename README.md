@@ -34,7 +34,4 @@ The code parallelises over experiments, taking command-line parameters to specif
 runs the default case of a 50x50x10μm cell with 100 mitochondria and simulation elements of width 0.5μm.
 
 
-`./mito-agents.ce`
-
-
 
