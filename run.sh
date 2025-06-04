@@ -33,6 +33,8 @@ if [[ $commandstr == *default* ]]; then
     ./mito-agents.ce 50 10 100 2 5 5e-6 > tmp-5 &
     ./mito-agents.ce 50 10 100 2 6 1 > tmp-6 &
     ./mito-agents.ce 50 10 100 2 7 1 > tmp-7 &
+    ./mito-agents.ce 50 10 100 2 8 0.5 > tmp-8 &
+    ./mito-agents.ce 50 10 100 2 9 0.5 > tmp-9 &
 fi
 
 if [[ $commandstr == *smaller* ]]; then
@@ -45,6 +47,8 @@ if [[ $commandstr == *smaller* ]]; then
     ./mito-agents.ce 20 10 100 2 5 5e-6 > tmp-5a &
     ./mito-agents.ce 20 10 100 2 6 1 > tmp-6a &
     ./mito-agents.ce 20 10 100 2 7 1 > tmp-7a &
+    ./mito-agents.ce 20 10 100 2 8 0.5 > tmp-8a &
+    ./mito-agents.ce 20 10 100 2 9 0.5 > tmp-9a &
 fi
 
 if [[ $commandstr == *thinner* ]]; then
@@ -57,6 +61,8 @@ if [[ $commandstr == *thinner* ]]; then
     ./mito-agents.ce 50 2 100 2 5 5e-6 > tmp-5b &
     ./mito-agents.ce 50 2 100 2 6 1 > tmp-6b &
     ./mito-agents.ce 50 2 100 2 7 1 > tmp-7b &
+    ./mito-agents.ce 50 2 100 2 8 0.5 > tmp-8b &
+    ./mito-agents.ce 50 2 100 2 9 0.5 > tmp-9b &
 fi
 
 if [[ $commandstr == *fatter* ]]; then
@@ -69,6 +75,8 @@ if [[ $commandstr == *fatter* ]]; then
     ./mito-agents.ce 50 20 100 2 5 5e-6 > tmp-5c &
     ./mito-agents.ce 50 20 100 2 6 1 > tmp-6c &
     ./mito-agents.ce 50 20 100 2 7 1 > tmp-7c &
+    ./mito-agents.ce 50 20 100 2 8 0.5 > tmp-8c &
+    ./mito-agents.ce 50 20 100 2 9 0.5 > tmp-9c &
 fi
 
 if [[ $commandstr == *more* ]]; then
@@ -81,6 +89,8 @@ if [[ $commandstr == *more* ]]; then
     ./mito-agents.ce 50 10 200 2 5 5e-6 > tmp-5d &
     ./mito-agents.ce 50 10 200 2 6 1 > tmp-6d &
     ./mito-agents.ce 50 10 200 2 7 1 > tmp-7d &
+    ./mito-agents.ce 50 10 200 2 8 0.5 > tmp-8d &
+    ./mito-agents.ce 50 10 200 2 9 0.5 > tmp-9d &
 fi
 
 if [[ $commandstr == *fewer* ]]; then
@@ -93,6 +103,8 @@ if [[ $commandstr == *fewer* ]]; then
     ./mito-agents.ce 50 10 50 2 5 5e-6 > tmp-5e &
     ./mito-agents.ce 50 10 50 2 6 1 > tmp-6e &
     ./mito-agents.ce 50 10 50 2 7 1 > tmp-7e &
+    ./mito-agents.ce 50 10 50 2 8 0.5 > tmp-8e &
+    ./mito-agents.ce 50 10 50 2 9 0.5 > tmp-9e &
 fi
 
 
@@ -106,6 +118,8 @@ if [[ $commandstr == *coarser* ]]; then
     ./mito-agents.ce 20 10 100 1 5 5e-6 > tmp-5f &
     ./mito-agents.ce 20 10 100 1 6 1 > tmp-6f &
     ./mito-agents.ce 20 10 100 1 7 1 > tmp-7f &
+    ./mito-agents.ce 20 10 100 1 8 0.5 > tmp-8f &
+    ./mito-agents.ce 20 10 100 1 9 0.5 > tmp-9f &
 fi
 
 # you can run the R script on the fly as results are being produced, but it obviously won't provide a full analysis until the code is finished running
