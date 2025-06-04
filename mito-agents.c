@@ -90,13 +90,14 @@ int main(int argc, char *argv[])
   //                        (2) clustered mitos, uniform consumption; (3) clustered mitos, clustered consumption
   //                        (4) mobile-1 mitos, uniform consumption; (5) mobile-1 mitos, clustered consumption;
   //                        (6) mobile-2 mitos, uniform consumption; (7) mobile-2 mitos, clustered consumption
+  //                        (8) mobile-2 mitos, uniform consumption; (9) mobile-2 mitos, clustered consumption
   if(argc < 6) {
-    printf("Please specify a cell size, cell depth, number of mitos, elements per um, and an experiment! Experiments 0-7\n");
+    printf("Please specify a cell size, cell depth, number of mitos, elements per um, and an experiment! Experiments 0-9\n");
     return 0;
   }
   SUBDIV = atoi(argv[4]);
   expt = atoi(argv[5]);
-  if(expt == 4 || expt == 5 || expt == 6 || expt == 7) {
+  if(expt >= 4) {
     if(argc < 7) {
       printf("This experiment needs a motion parameter!\n");
       return 0;
@@ -156,6 +157,7 @@ int main(int argc, char *argv[])
 	      if(expt == 2 || expt == 3) { x[m] = (RND-0.5)*CENTRE+GRIDX/2; y[m] = (RND-0.5)*CENTRE+GRIDY/2; }
 	      if(expt == 4 || expt == 5) { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
 	      if(expt == 6 || expt == 7) { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
+	      if(expt == 8 || expt == 9) { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
 	    }
 
 	  // initialise cell with zero ATP
@@ -169,7 +171,7 @@ int main(int argc, char *argv[])
 	  lastt = -1; changeATP = 1; totalATP = lastATP = 0;
 
 	  // initialise output files
-	  if(expt == 4 || expt == 5 || expt == 6 || expt == 7)
+	  if(expt >= 4)
 	    {
 	      sprintf(mitosnapfstr, "out-mitos-%i-%i-%i-%i-%.2f-%.2f-%i.txt", expt, cellsize, DEPTH, NMITO, kappa, delta, SUBDIV);
 	      fp = fopen(mitosnapfstr, "w");
@@ -199,12 +201,12 @@ int main(int argc, char *argv[])
 		      newgrid[i*GRIDY+j] = grid[i*GRIDY+j] + (D/(gridx*gridx))*(dt*(l + r - 2*h) + dt*(u + d - 2*h));
 			  
 		      // loss of ATP. in proportion to current concentration; sites of loss depend on model
-		      if(expt == 0 || expt == 2 || expt == 4 || expt == 6)
+		      if(expt % 2 == 0)
 			{
 			  // loss throughout cell
 			  loss = dt* newgrid[i*GRIDY+j]*kappa;
 			}
-		      if(expt == 1 || expt == 3 || expt == 5 || expt == 7)
+		      if(expt % 2 == 1)
 			{
 			  // loss only in central circular region
 			  if((i-CENTRE)*(i-CENTRE) + (j-CENTRE)*(j-CENTRE) < (CENTRE*CENTRE/4))
@@ -219,7 +221,7 @@ int main(int argc, char *argv[])
 		}
 
 	      // move our mitochondria, if required
-	      if(expt == 4 || expt == 5 || expt == 6 || expt == 7) {
+	      if(expt >= 4) {
 		for(m = 0; m < NMITO; m++)
 		  {
 		    i = myround(x[m]); j = myround(y[m]);
@@ -234,6 +236,11 @@ int main(int argc, char *argv[])
 		      // random diffusion with width mparam * [ATP] um / second
 		      dx = gsl_ran_gaussian(mparam*h/(gridx*gridx));
 		      dy = gsl_ran_gaussian(mparam*h/(gridx*gridx));
+		    }
+		    if(expt == 8 || expt == 9) {
+		      // random diffusion with width mparam 
+		      dx = gsl_ran_gaussian(mparam);
+		      dy = gsl_ran_gaussian(mparam);
 		    }
 		    if(expt == 6 || expt == 7) {
 		      gradx = (r-l)/2.;
@@ -315,7 +322,7 @@ int main(int argc, char *argv[])
 		  fprintf(fp, "%i,%e,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,0\n", expt, mparam, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, meanATP, varATP, vol, totalloss/dt);
 		  fclose(fp);
 
-		  if(expt == 4 || expt == 5 || expt == 6 || expt == 7)
+		  if(expt >= 4)
 		    {
 		      fp = fopen(mitosnapfstr, "a");
 		      for(m = 0; m < NMITO; m++)
