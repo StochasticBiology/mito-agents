@@ -26,6 +26,7 @@
 int NMITO = 100;     // number of mitos in cell
 int DEPTH = 10;      // depth of cell in um
 int SUBDIV = 2;      // number of simulation cells in 1um3, controls grid granularity
+int FIBREWIDTH = 3;  // half-width of a "sarcomere" fibre
 
 #define RND drand48()
 
@@ -80,24 +81,26 @@ int main(int argc, char *argv[])
   double dx, dy, gradx, grady, norm;
   int cellsize;
   int GRIDX, GRIDY;
-  int CENTRE, CENTRESCALE;
+  int CENTRE;
+  double CENTRESCALE, FIBRESCALE;
   double D = 2.5e2;
   double speed;
   double gridx;
 
   // process command-line arguments
-  // different experiments: (0) uniform mitos, uniform consumption; (1) uniform mitos, clustered consumption;
-  //                        (2) clustered mitos, uniform consumption; (3) clustered mitos, clustered consumption
-  //                        (4) mobile-1 mitos, uniform consumption; (5) mobile-1 mitos, clustered consumption;
-  //                        (6) mobile-2 mitos, uniform consumption; (7) mobile-2 mitos, clustered consumption
-  //                        (8) mobile-2 mitos, uniform consumption; (9) mobile-2 mitos, clustered consumption
+  // to be compatible with pre-review code, we have an awkward protocol. even numbers: uniform consumption; odd numbers, clustered consumption; negative numbers, fibre consumption
+  // different experiments: (0) uniform mitos, uniform consumption; (1) uniform mitos, clustered consumption; (-1) uniform mitos, fibre consumption;
+  //                        (2) clustered mitos, uniform consumption; (3) clustered mitos, clustered consumption; (-3) clustered mitos, fibre consumption;
+  //                        (4) mobile-1 mitos, uniform consumption; (5) mobile-1 mitos, clustered consumption; (-5) mobile-1 mitos, fibre consumption;
+  //                        (6) mobile-2 mitos, uniform consumption; (7) mobile-2 mitos, clustered consumption; (-7) mobile-2 mitos, fibre consumption;
+  //                        (8) mobile-3 mitos, uniform consumption; (9) mobile-3 mitos, clustered consumption; (-9) mobile-3 mitos, fibre consumption
   if(argc < 6) {
     printf("Please specify a cell size, cell depth, number of mitos, elements per um, and an experiment! Experiments 0-9\n");
     return 0;
   }
   SUBDIV = atoi(argv[4]);
   expt = atoi(argv[5]);
-  if(expt >= 4) {
+  if(abs(expt) >= 4) {
     if(argc < 7) {
       printf("This experiment needs a motion parameter!\n");
       return 0;
@@ -122,9 +125,12 @@ int main(int argc, char *argv[])
   gridx = 1./SUBDIV;
   GRIDX = GRIDY = cellsize*SUBDIV;
   CENTRE = GRIDX/2;
-  
+
+  // scaling factors to account for the fact that a cell's worth of ATP consumption will be constrained to a smaller area
   // circle radius CENTRE/2 -> pi (grid/4)^2 vs grid^2 -> 1./(pi/16.) 
   CENTRESCALE = 1./(3.1416/16.);
+  // 3 fibres length grid half-width FIBREWIDTH -> grid*2*FIBREWIDTH*3 vs grid^2 -> grid/(6*FIBREWIDTH)
+  FIBRESCALE = ((double)GRIDX)/(6*FIBREWIDTH);
   
   // allocate memory to store GRIDX*GRIDY grid of ATP concentration values
   grid = (double*)malloc(sizeof(double)*GRIDX*GRIDY);
@@ -152,12 +158,9 @@ int main(int argc, char *argv[])
 	  // initialises positions of mitochondria (x, y are coordinates)
 	  for(m = 0; m < NMITO; m++)
 	    {
-	      // if expt == 1, cluster near centre; otherwise spead evenly
-	      if(expt == 0 || expt == 1) { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
-	      if(expt == 2 || expt == 3) { x[m] = (RND-0.5)*CENTRE+GRIDX/2; y[m] = (RND-0.5)*CENTRE+GRIDY/2; }
-	      if(expt == 4 || expt == 5) { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
-	      if(expt == 6 || expt == 7) { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
-	      if(expt == 8 || expt == 9) { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
+	      // if expt == 2 or 3, cluster near centre; otherwise spead evenly
+	      if(abs(expt) == 2 || abs(expt) == 3) { x[m] = (RND-0.5)*CENTRE+GRIDX/2; y[m] = (RND-0.5)*CENTRE+GRIDY/2; }
+	      else { x[m] = RND*GRIDX; y[m] = RND*GRIDY; }
 	    }
 
 	  // initialise cell with zero ATP
@@ -171,7 +174,7 @@ int main(int argc, char *argv[])
 	  lastt = -1; changeATP = 1; totalATP = lastATP = 0;
 
 	  // initialise output files
-	  if(expt >= 4)
+	  if(abs(expt) >= 4)
 	    {
 	      sprintf(mitosnapfstr, "out-mitos-%i-%i-%i-%i-%.2f-%.2f-%i.txt", expt, cellsize, DEPTH, NMITO, kappa, delta, SUBDIV);
 	      fp = fopen(mitosnapfstr, "w");
@@ -201,12 +204,20 @@ int main(int argc, char *argv[])
 		      newgrid[i*GRIDY+j] = grid[i*GRIDY+j] + (D/(gridx*gridx))*(dt*(l + r - 2*h) + dt*(u + d - 2*h));
 			  
 		      // loss of ATP. in proportion to current concentration; sites of loss depend on model
-		      if(expt % 2 == 0)
+		      if(expt < 0)
+			{
+			  // loss in sarcomere fibres
+			  if(abs(j - GRIDX/4) < FIBREWIDTH || abs(j - GRIDX/2) < FIBREWIDTH || abs(j - 3*GRIDX/4) < FIBREWIDTH)
+			    loss = dt* newgrid[i*GRIDY+j]*kappa*FIBRESCALE;
+			  else
+			    loss = 0;
+			}
+		      else if(expt % 2 == 0)
 			{
 			  // loss throughout cell
 			  loss = dt* newgrid[i*GRIDY+j]*kappa;
 			}
-		      if(expt % 2 == 1)
+		      else if(expt % 2 == 1)
 			{
 			  // loss only in central circular region
 			  if((i-CENTRE)*(i-CENTRE) + (j-CENTRE)*(j-CENTRE) < (CENTRE*CENTRE/4))
@@ -221,7 +232,7 @@ int main(int argc, char *argv[])
 		}
 
 	      // move our mitochondria, if required
-	      if(expt >= 4) {
+	      if(abs(expt) >= 4) {
 		for(m = 0; m < NMITO; m++)
 		  {
 		    i = myround(x[m]); j = myround(y[m]);
@@ -232,17 +243,17 @@ int main(int argc, char *argv[])
 		    d = (j == GRIDY-1 ? grid[i*GRIDY+j] : grid[i*GRIDY+j+1]);
 		    h = grid[i*GRIDY+j];
 
-		    if(expt == 4 || expt == 5) {
+		    if(abs(expt) == 4 || abs(expt) == 5) {
 		      // random diffusion with width mparam * [ATP] um / second
 		      dx = gsl_ran_gaussian(mparam*h/(gridx*gridx));
 		      dy = gsl_ran_gaussian(mparam*h/(gridx*gridx));
 		    }
-		    if(expt == 8 || expt == 9) {
+		    if(abs(expt) == 8 || abs(expt) == 9) {
 		      // random diffusion with width mparam 
 		      dx = gsl_ran_gaussian(mparam);
 		      dy = gsl_ran_gaussian(mparam);
 		    }
-		    if(expt == 6 || expt == 7) {
+		    if(abs(expt) == 6 || abs(expt) == 7) {
 		      gradx = (r-l)/2.;
 		      grady = (u-d)/2.;
 		      norm = sqrt(gradx*gradx + grady*grady);
@@ -322,7 +333,7 @@ int main(int argc, char *argv[])
 		  fprintf(fp, "%i,%e,%.2e,%.2e,%i,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,%.2e,0\n", expt, mparam, kappa, delta, (int)t, totalATP, totalATP/6e23/vol, minATP, maxATP, changeATP, meanATP, varATP, vol, totalloss/dt);
 		  fclose(fp);
 
-		  if(expt >= 4)
+		  if(abs(expt) >= 4)
 		    {
 		      fp = fopen(mitosnapfstr, "a");
 		      for(m = 0; m < NMITO; m++)
