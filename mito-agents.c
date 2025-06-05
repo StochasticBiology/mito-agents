@@ -250,8 +250,8 @@ int main(int argc, char *argv[])
 		    }
 		    if(abs(expt) == 8 || abs(expt) == 9) {
 		      // random diffusion with width mparam 
-		      dx = gsl_ran_gaussian(mparam);
-		      dy = gsl_ran_gaussian(mparam);
+		      dx = gsl_ran_gaussian(mparam/dt);
+		      dy = gsl_ran_gaussian(mparam/dt);
 		    }
 		    if(abs(expt) == 6 || abs(expt) == 7) {
 		      gradx = (r-l)/2.;
