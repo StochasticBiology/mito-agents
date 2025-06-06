@@ -11,6 +11,7 @@
 # more        -- more mitochondria
 # fewer       -- fewer mitochondria
 # coarser     -- coarser grid elements in numerical scheme
+# postrev     -- suggested in peer review: mito diffusion independent of [ATP], fibre-shaped ATP consumption
 
 if [ $# -eq 0 ]
 then
@@ -33,6 +34,19 @@ if [[ $commandstr == *default* ]]; then
     ./mito-agents.ce 50 10 100 2 5 5e-6 > tmp-5 &
     ./mito-agents.ce 50 10 100 2 6 1 > tmp-6 &
     ./mito-agents.ce 50 10 100 2 7 1 > tmp-7 &
+fi
+
+if [[ $commandstr == *postrev* ]]; then
+    # mito diffusion independent of [ATP]
+    ./mito-agents.ce 50 10 100 2 8 0.0125 > tmp-8r1 &
+    ./mito-agents.ce 50 10 100 2 9 0.0125 > tmp-9r1 &
+    
+    # fibre-shaped ATP consumption. awkward negative arguments (see source code)
+    ./mito-agents.ce 50 10 100 2 -1 > tmp-1r2 &
+    ./mito-agents.ce 50 10 100 2 -3 > tmp-3r2 &
+    ./mito-agents.ce 50 10 100 2 -5 5e-6 > tmp-5r2 &
+    ./mito-agents.ce 50 10 100 2 -7 1 > tmp-7r2 &
+    ./mito-agents.ce 50 10 100 2 -9 0.0125 > tmp-9r2 &
 fi
 
 if [[ $commandstr == *smaller* ]]; then
