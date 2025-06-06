@@ -38,8 +38,8 @@ fi
 
 if [[ $commandstr == *postrev* ]]; then
     # mito diffusion independent of [ATP]
-    ./mito-agents.ce 50 10 100 2 8 0.5 > tmp-8r1 &
-    ./mito-agents.ce 50 10 100 2 9 0.5 > tmp-9r1 &
+    ./mito-agents.ce 50 10 100 2 8 0.025 > tmp-8r1 &
+    ./mito-agents.ce 50 10 100 2 9 0.025 > tmp-9r1 &
     
     # fibre-shaped ATP consumption. awkward negative arguments (see source code)
     ./mito-agents.ce 50 10 100 2 -1 > tmp-1r2 &
