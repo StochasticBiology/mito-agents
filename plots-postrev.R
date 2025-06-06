@@ -142,7 +142,7 @@ for(this.expts in expts.set) {
     scale_y_continuous(transform = "log10") + 
     scale_fill_viridis(option="inferno") +
     labs(y="ATP consumption / "~cell^{-1}~s^{-1}, x="[ATP] / mM", fill="Fold range", size="Fold range") +
-    facet_wrap(~factor(expt.label, levels=plot.order), nrow=2, ncol=5) +
+    facet_wrap(~factor(expt.label, levels=plot.order), nrow=3, ncol=5) +
     theme_light()
   
   p.3.zoom.a = ggplot() +
@@ -154,7 +154,7 @@ for(this.expts in expts.set) {
     scale_y_continuous(transform = "log10") + 
     scale_fill_viridis(option="inferno") +
     labs(y="ATP consumption / "~cell^{-1}~s^{-1}, x="[ATP] / mM") +
-    facet_wrap(~factor(expt.label, levels=plot.order), nrow=2, ncol=5) +
+    facet_wrap(~factor(expt.label, levels=plot.order), nrow=3, ncol=5) +
     theme_light()
   
   # so model 0 shows only limited maximal values; model 1 more; model 2 very high
@@ -205,9 +205,6 @@ for(this.expts in expts.set) {
     deltas = rep(0.64, nexpt)
     kappas = rep(0.16, nexpt)
     deltas = rep(5.12, nexpt)
-    kappas = rep(0.01, nexpt)
-    deltas = rep(0.01, nexpt)
-    
     #was deltas = rep(c(0.32, 5.12), 4)
   }
   if(gsize == 20) {
