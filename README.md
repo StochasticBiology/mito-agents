@@ -15,8 +15,9 @@ Run `run.sh` with one of the arguments below to compile and run the code for a p
 * `more`        -- more mitochondria
 * `fewer`       -- fewer mitochondria
 * `coarser`     -- coarser grid elements in numerical scheme
+* `postrev`     -- following peer review, ATP-independent diffusion and "fibrous" ATP consumption
 
-After the code completes (an hour or two on a modern machine, if 8 cores are available to run the 8 experimental designs in parallel), run `plots.R` to analyse and visualise the output.
+After the code completes (an hour or two on a modern machine, if 8 cores are available to run the 8 experimental designs in parallel), run `plots.R` to analyse and visualise the output. `plots-postrev.R` produces plots showing the `postrev` content above. In future these pipelines will be pulled together for parsimony.
 
 Details
 ----
@@ -27,11 +28,18 @@ Compile the code with, for example (using `gcc`):
 
 `gcc mito-agents.c -lm -o mito-agents.ce`
 
-The code parallelises over experiments, taking command-line parameters to specify several parameters. In order, these are cell width, cell depth, number of mitochondria (max 1000), and how many simulation elements correspond to 1μm. For example:
+The code parallelises over experiments, taking command-line parameters to specify several parameters. In order, these are cell width, cell depth, number of mitochondria (max 1000), and how many simulation elements correspond to 1μm, the experiment to run (see below), and (for some experiments) a motion scale parameter. 
 
-`./mito-agents.ce 50 10 100 2`
+The label determining the experiment to run is a little complicated at the moment thanks to the chronology of the project. We'll simplify this in future.
 
-runs the default case of a 50x50x10μm cell with 100 mitochondria and simulation elements of width 0.5μm.
+(0) uniform mitos, uniform consumption; (1) uniform mitos, clustered consumption; (-1) uniform mitos, fibrous consumption; (2) clustered mitos, uniform consumption; (3) clustered mitos, clustered consumption; (-3) clustered mitos, fibrous consumption; (4) mobile-1 mitos, uniform consumption; (5) mobile-1 mitos, clustered consumption; (-5) mobile-1 mitos, fibrous consumption; (6) mobile-2 mitos, uniform consumption; (7) mobile-2 mitos, clustered consumption; (-7) mobile-2 mitos, fibrous consumption; (8) mobile-3 mitos, uniform consumption; (9) mobile-3 mitos, clustered consumption; (-9) mobile-3 mitos, fibrous consumption.
 
+mobile-1 means ATP-dependent diffusion; mobile-2 means directed down the ATP gradient; mobile-3 means ATP-independent diffusion. These three cases require a motion parameter scaling either the diffusion kernel or the gradient influence on motion. 
+
+For example:
+
+`./mito-agents.ce 50 10 100 2 -9 0.0125`
+
+runs the default case of a 50x50x10μm cell with 100 mitochondria and simulation elements of width 0.5μm. The experiment run is ATP-independent mitochondrial diffusion with fibrous ATP consumption [-9], with a motion parameter of 0.0125 giving the scale of the diffusion kernel. See `run.sh` for the default parameterisations used in the project.
 
 
