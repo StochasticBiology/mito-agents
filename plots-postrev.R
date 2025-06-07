@@ -24,9 +24,9 @@ for(this.expts in expts.set) {
   print(paste0("----- Thinking about ", paste0(this.expts, collapse=" ")))
   
   expt.labels = c("Uniform mitos, Uniform κ", "Uniform mitos, Local κ", "Local mitos, Uniform κ", "Local mitos, Local κ",
-                  "Diffusive mitos, Uniform κ", "Diffusive mitos, Local κ", "Directed mitos, Uniform κ", "Directed mitos, Local κ",
-                  "Diffusive* mitos, Uniform κ", "Diffusive* mitos, Local κ",
-                  "Uniform mitos, Fibrous κ", "Local mitos, Fibrous κ", "Diffusive mitos, Fibrous κ", "Directed mitos, Fibrous κ", "Diffusive* mitos, Fibrous κ")
+                  "Diffusive* mitos, Uniform κ", "Diffusive* mitos, Local κ", "Directed mitos, Uniform κ", "Directed mitos, Local κ",
+                  "Diffusive mitos, Uniform κ", "Diffusive mitos, Local κ",
+                  "Uniform mitos, Fibrous κ", "Local mitos, Fibrous κ", "Diffusive* mitos, Fibrous κ", "Directed mitos, Fibrous κ", "Diffusive mitos, Fibrous κ")
   df$expt.label = expt.labels[df$expt+1]
   
   ###### RQ1. When is a reasonable fold range in ATP supported at equilibrium?
@@ -129,10 +129,14 @@ for(this.expts in expts.set) {
   
   p.3.zoom + scale_color_viridis()
   
-   plot.order = c("Uniform mitos, Uniform κ",  "Local mitos, Uniform κ", "Diffusive* mitos, Uniform κ", "Diffusive mitos, Uniform κ", "Directed mitos, Uniform κ", 
-                 "Uniform mitos, Local κ", "Local mitos, Local κ", "Diffusive* mitos, Local κ", "Diffusive mitos, Local κ", "Directed mitos, Local κ",
-                 "Uniform mitos, Fibrous κ", "Local mitos, Fibrous κ", "Diffusive* mitos, Fibrous κ", "Diffusive mitos, Fibrous κ", "Directed mitos, Fibrous κ")
+   plot.order = c("Uniform mitos, Uniform κ",  "Local mitos, Uniform κ", "Diffusive mitos, Uniform κ", "Diffusive* mitos, Uniform κ", "Directed mitos, Uniform κ", 
+                 "Uniform mitos, Local κ", "Local mitos, Local κ", "Diffusive mitos, Local κ", "Diffusive* mitos, Local κ", "Directed mitos, Local κ",
+                 "Uniform mitos, Fibrous κ", "Local mitos, Fibrous κ", "Diffusive mitos, Fibrous κ", "Diffusive* mitos, Fibrous κ", "Directed mitos, Fibrous κ")
   
+   df$expt.label.red = gsub(" mitos", "", df$expt.label)
+   df$expt.label.red = gsub("Local", "Central", df$expt.label.red)
+   plot.order.red = gsub(" mitos", "", plot.order)
+   plot.order.red = gsub("Local", "Central", plot.order.red)
   p.2.zoom.a = ggplot() +
     geom_point(data = df[df$terminated==1 & 
                            df$conc.ATP > 5e-4 & df$conc.ATP < 1e-2 &
@@ -142,7 +146,7 @@ for(this.expts in expts.set) {
     scale_y_continuous(transform = "log10") + 
     scale_fill_viridis(option="inferno") +
     labs(y="ATP consumption / "~cell^{-1}~s^{-1}, x="[ATP] / mM", fill="Fold range", size="Fold range") +
-    facet_wrap(~factor(expt.label, levels=plot.order), nrow=3, ncol=5) +
+    facet_wrap(~factor(expt.label.red, levels=plot.order.red), nrow=3, ncol=5) +
     theme_light()
   
   p.3.zoom.a = ggplot() +
@@ -154,7 +158,7 @@ for(this.expts in expts.set) {
     scale_y_continuous(transform = "log10") + 
     scale_fill_viridis(option="inferno") +
     labs(y="ATP consumption / "~cell^{-1}~s^{-1}, x="[ATP] / mM") +
-    facet_wrap(~factor(expt.label, levels=plot.order), nrow=3, ncol=5) +
+    facet_wrap(~factor(expt.label.red, levels=plot.order.red), nrow=3, ncol=5) +
     theme_light()
   
   # so model 0 shows only limited maximal values; model 1 more; model 2 very high
@@ -309,14 +313,15 @@ for(this.expts in expts.set) {
   )
   
   g.static.labs = ggarrange(
-    ggarrange(plotlist = dyn.list[[1]], nrow=1),
+   ggarrange(plotlist = dyn.list[[1]], nrow=1),
     ggarrange(plotlist = dyn.list[[2]], nrow=1),
     ggarrange(plotlist = dyn.list[[11]], nrow=1),
     ggarrange(plotlist = dyn.list[[3]], nrow=1),
     ggarrange(plotlist = dyn.list[[4]], nrow=1),
     ggarrange(plotlist = dyn.list[[12]], nrow=1),
     nrow=2, ncol=3,
-    labels=c("A", "B", "C", "D", "E", "F")
+   labels=c("Ai", "ii", "iii", "Bi", "ii", "iii"),
+   label.x = -0.02
   )
   
   # expt.labels
@@ -337,19 +342,20 @@ for(this.expts in expts.set) {
   )
   
   g.dynamic.labs = ggarrange(
-    ggarrange(plotlist = dyn.list[[5]], nrow=1),
     ggarrange(plotlist = dyn.list[[9]], nrow=1),
-    ggarrange(plotlist = dyn.list[[7]], nrow=1),
-    
-    ggarrange(plotlist = dyn.list[[6]], nrow=1),
     ggarrange(plotlist = dyn.list[[10]], nrow=1),
-    ggarrange(plotlist = dyn.list[[8]], nrow=1),
-    
-    ggarrange(plotlist = dyn.list[[13]], nrow=1),
     ggarrange(plotlist = dyn.list[[15]], nrow=1),
+    
+    ggarrange(plotlist = dyn.list[[5]], nrow=1),
+    ggarrange(plotlist = dyn.list[[6]], nrow=1),
+    ggarrange(plotlist = dyn.list[[13]], nrow=1),
+    
+    ggarrange(plotlist = dyn.list[[7]], nrow=1),
+    ggarrange(plotlist = dyn.list[[8]], nrow=1),
     ggarrange(plotlist = dyn.list[[14]], nrow=1),
     nrow=3, ncol=3,
-    labels=c("A", "B", "C", "D", "E", "F", "G", "H", "I")
+    labels=c("Ai", "ii", "iii", "Bi", "ii", "iii", "Ci", "ii", "iii"),
+    label.x = -0.02
   )
   
   #dyn.list[[1]][[1]] + scale_fill_viridis_c(limits = range(data$value) + c(-0.05, 0.05))
@@ -372,12 +378,12 @@ for(this.expts in expts.set) {
   dev.off()
   
   fname = paste0("snaps-static-", gsize, "-", depth, "-", nmito, "-", subdiv, ".png", collapse="")
-  png(fname, width=600*sf, height=400*sf, res=72*sf)
+  png(fname, width=900*sf, height=400*sf, res=72*sf)
   print(g.static.labs)
   dev.off()
   
   fname = paste0("snaps-dynamic-", gsize, "-", depth, "-", nmito, "-", subdiv, ".png", collapse="")
-  png(fname, width=600*sf, height=400*sf, res=72*sf)
+  png(fname, width=800*sf, height=600*sf, res=72*sf)
   print(g.dynamic.labs)
   dev.off()
   
